@@ -2513,7 +2513,16 @@ html[data-theme=ocean][data-fx=high] .btn:hover{animation:nmwave .9s ease-in-out
 .vchip.talk{outline:2px solid var(--ac);outline-offset:2px}
 </style>
 
-</head>
+<style>
+.ronl{margin:12px 0 4px;padding:10px 12px;border-radius:14px;background:rgba(127,127,127,.1);text-align:left}
+.ronl-h{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.82rem}
+.ronl-d{display:inline-block;width:8px;height:8px;border-radius:50%;background:#35d07f;box-shadow:0 0 8px #35d07f;margin-right:4px;vertical-align:middle}
+.ronl-h span{font-size:.72rem;padding:2px 8px;border-radius:99px}
+.ronl-h .ok{background:rgba(53,208,127,.18);color:#35d07f}.ronl-h .no{background:rgba(255,120,120,.18);color:#ff8a8a}
+.ronl-l{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ronl-c{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 4px;border-radius:99px;background:rgba(127,127,127,.14);font-size:.76rem}
+.ronl-c.me{outline:1px solid rgba(53,208,127,.5)}
+</style></head>
 <body>
 <canvas id="fx"></canvas>
 <div class="bg" aria-hidden="true"><i></i><i></i><i></i></div>
@@ -4876,6 +4885,7 @@ ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas
                     is_playing: false,
                     updated_at: new Date()
                 }).eq('code', room.code);
+            if (!fromRoom && room && room.host_id === me.id && window._roomPush) window._roomPush({ playing: false, pos: 0, ep: e.id });
         };
         filmActs(document.querySelector('#fplayer [data-acts]'), t);
         if (!roomMode) chatStart(document.getElementById('cchat'), t);
@@ -4929,6 +4939,8 @@ ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas
         cancelRec();
         stopPlayer();
         clearInterval(hb);
+        if (window._roomBye) { try { window._roomBye(); } catch (e) { } }
+        window._roomPush = null; window._roomBye = null;
         leaveVoice();
         if (chan) {
             sb.removeChannel(chan);
@@ -5016,50 +5028,123 @@ async function loadPublic() {
 
 function bindRoom(v) {
     const host = room.host_id === me.id, url = `${location.origin}${location.pathname}?room=${room.code}`;
-    $('#rinfo').innerHTML = `<div class="glass pad" style="margin-bottom:10px"><div class="code">${room.code}</div><p class="vis-b">${room.is_public ? ic('globe') + ' Publik' : ic('lock') + ' Privat · bagikan kodenya'}</p><p style="text-align:center;color:var(--mut);font-size:.8rem">${host ? 'Kamu host: kontrol play/pause kamu diikuti semua' : 'Ikut kontrol host'}</p><div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button class="btn sm" id="cp">${ic('copy')} Salin link</button></div>${voiceUI()}${chatUI()}</div>`;
+    $('#rinfo').innerHTML = `<div class="glass pad" style="margin-bottom:10px"><div class="code">${room.code}</div><p class="vis-b">${room.is_public ? ic('globe') + ' Publik' : ic('lock') + ' Privat · bagikan kodenya'}</p><p style="text-align:center;color:var(--mut);font-size:.8rem">${host ? 'Kamu host: kontrol play/pause kamu diikuti semua' : 'Ikut kontrol host'}</p><div style="display:flex;gap:8px;justify-content:center;margin-top:8px"><button class="btn sm" id="cp">${ic('copy')} Salin link</button></div><div class="ronl" id="ronl"></div>${voiceUI()}${chatUI()}</div>`;
     $('#cp').onclick = () => navigator.share ? navigator.share({
         title: 'Nobar NauMovie',
         text: `Nobar yuk! Kode: ${room.code}`,
         url
     }) : navigator.clipboard.writeText(url).then(() => toast('Link disalin'));
-    const push = () => {
+    const dbPush = () => {
         if (host && !suppress)
             sb.from('rooms').update({
                 is_playing: !v.paused,
                 position: v.currentTime,
                 updated_at: new Date()
-            }).eq('code', room.code);
+            }).eq('code', room.code).then(() => { }, () => { });
     };
-    ['play', 'pause', 'seeked'].forEach(e => v.addEventListener(e, push));
-    chan = sb.channel('r' + room.code).on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'rooms',
-        filter: `code=eq.${room.code}`
-    }, ({ new: n }) => {
-        if (host)
-            return;
+    const code = room.code;
+    let ch = null, subbed = false, want = null;
+    // ---- host: kirim status lewat Realtime Broadcast (instan, tidak bergantung pada tabel) + simpan ke tabel untuk yang baru masuk ----
+    const send = (o = {}) => {
+        if (!host || !ch || !subbed) return;
+        const msg = Object.assign({ playing: !v.paused, pos: v.currentTime || 0, ep: curEp ? curEp.id : null, ts: Date.now() }, o);
+        ch.send({ type: 'broadcast', event: 'sync', payload: msg }).catch(() => { });
+    };
+    const push = () => { if (suppress) return; send(); dbPush(); };
+    ['play', 'pause', 'seeked', 'ratechange'].forEach(e => v.addEventListener(e, push));
+    v.addEventListener('ended', () => { if (!suppress) send({ playing: false }); });
+    window._roomPush = o => { send(o); };
+    // ---- tamu: ikuti host ----
+    const apply = (n, live) => {
+        if (host || !n || !v.isConnected) return;
+        want = n;
         suppress = true;
-        if (n.episode_id && curEp && n.episode_id !== curEp.id) {
-            const e = epList.find(x => x.id == n.episode_id);
-            if (e)
-                window._sw(e, true);
-        }
-        if (Math.abs(v.currentTime - n.position) > 2.5)
-            v.currentTime = n.position;
-        n.is_playing ? v.play().catch(() => toast('Tap play untuk ikut')) : v.pause();
+        try {
+            if (n.ep && curEp && n.ep != curEp.id) {
+                const e = epList.find(x => x.id == n.ep);
+                if (e) window._sw(e, true);
+            }
+            let pos = +n.pos || 0;
+            if (n.playing && live && n.ts) { const d = Date.now() - n.ts; if (d > 0 && d < 3000) pos += d / 1000; }
+            if (Math.abs((v.currentTime || 0) - pos) > 2.5 || (!n.playing && Math.abs((v.currentTime || 0) - pos) > .6)) v.currentTime = pos;
+            if (n.playing) { if (v.paused) v.play().catch(() => toast('Tap layar untuk ikut nonton')); }
+            else if (!v.paused) v.pause();
+        } catch (e) { }
         setTimeout(() => suppress = false, 900);
-    })
+    };
+    // autoplay diblokir browser: putar begitu tamu menyentuh layar
+    const tapPlay = () => { if (want && want.playing && v.paused && v.isConnected) v.play().catch(() => { }); };
+    addEventListener('pointerdown', tapPlay, { passive: true });
+    // ---- host keluar = semua tamu ikut keluar + notifikasi ----
+    let kicked = false, hostT = null;
+    const kick = msg => {
+        if (host || kicked || !v.isConnected) return;
+        kicked = true; clearTimeout(hostT);
+        try { v.pause(); } catch (e) { }
+        toast(msg);
+        try { if (window.Notification && Notification.permission === 'granted' && document.hidden) new Notification('NauMovie · Nobar', { body: msg }); } catch (e) { }
+        setTimeout(() => { const b = $('#fback'); if (b) b.click(); }, 1200);
+    };
+    const bye = () => { if (host && ch && subbed) ch.send({ type: 'broadcast', event: 'bye', payload: { id: me.id, ts: Date.now() } }).catch(() => { }); };
+    window._roomBye = bye;
+    if (host) addEventListener('pagehide', bye);
+    // ---- daftar online (Presence) ----
+    const meta = { id: me.id, name: me.username, avatar: me.avatar || 'kucing', host };
+    let ready = false;
+    const people = () => { const st = ch ? ch.presenceState() : {}; const m = {}; Object.values(st).forEach(a => a.forEach(x => { m[x.id] = x; })); return Object.values(m); };
+    const drawOnline = () => {
+        const box = $('#ronl'); if (!box) return;
+        const L = people().sort((a, b) => (b.host ? 1 : 0) - (a.host ? 1 : 0) || String(a.name).localeCompare(String(b.name)));
+        const hostOn = L.some(x => x.host);
+        box.innerHTML = `<div class="ronl-h"><b><i class="ronl-d"></i> Online · ${L.length} orang</b>${host ? '' : `<span class="${hostOn ? 'ok' : 'no'}">${hostOn ? 'Host online' : 'Host offline'}</span>`}</div><div class="ronl-l">${L.map(x => `<span class="ronl-c ${x.id === me.id ? 'me' : ''}">${av(x.avatar, 22)}<span>${esc(x.name || 'Teman')}${x.host ? ' · Host' : ''}${x.id === me.id ? ' (kamu)' : ''}</span></span>`).join('')}</div>`;
+    };
+    ch = chan = sb.channel('r' + code, { config: { broadcast: { self: false }, presence: { key: String(me.id) } } })
+        .on('broadcast', { event: 'sync' }, ({ payload }) => apply(payload, true))
+        .on('broadcast', { event: 'hello' }, () => { if (host) { send(); } })
+        .on('broadcast', { event: 'bye' }, () => kick('Host meninggalkan room, kamu otomatis keluar'))
+        .on('presence', { event: 'sync' }, drawOnline)
+        .on('presence', { event: 'join', }, ({ newPresences }) => {
+            if (!ready) return;
+            if ((newPresences || []).some(x => x.host)) clearTimeout(hostT);
+            (newPresences || []).forEach(x => { if (x.id !== me.id) { toast(`${x.name || 'Teman'} bergabung`); if (host) setTimeout(send, 600); } });
+        })
+        .on('presence', { event: 'leave' }, ({ leftPresences }) => {
+            (leftPresences || []).forEach(x => { if (x.id !== me.id) toast(`${x.name || 'Teman'} keluar`); });
+            // host hilang tanpa pamit (tab ditutup / koneksi putus): beri waktu 12 detik, kalau tidak kembali tamu dikeluarkan
+            if (!host && (leftPresences || []).some(x => x.host)) { clearTimeout(hostT); hostT = setTimeout(() => { if (!people().some(x => x.host)) kick('Host terputus dari room, kamu otomatis keluar'); }, 12000); }
+        })
         .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'room_chat',
-        filter: `code=eq.${room.code}`
-    }, ({ new: c }) => addChat(c)).subscribe();
+            event: 'UPDATE',
+            schema: 'public',
+            table: 'rooms',
+            filter: `code=eq.${code}`
+        }, ({ new: n }) => apply({ playing: n.is_playing, pos: n.position, ep: n.episode_id }, false))
+        .on('postgres_changes', {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'room_chat',
+            filter: `code=eq.${code}`
+        }, ({ new: c }) => addChat(c))
+        .subscribe(async st => {
+            if (st === 'SUBSCRIBED') {
+                subbed = true;
+                try { await ch.track(meta); } catch (e) { }
+                setTimeout(() => { ready = true; }, 1500);
+                if (!host) {
+                    apply({ playing: room.is_playing, pos: room.position, ep: room.episode_id }, false); // keadaan terakhir dari tabel
+                    ch.send({ type: 'broadcast', event: 'hello', payload: { id: me.id } }).catch(() => { }); // minta host kirim posisi terkini
+                } else send();
+                drawOnline();
+            } else if (st === 'CHANNEL_ERROR' || st === 'TIMED_OUT') {
+                subbed = false;
+                toast('Koneksi nobar terputus, mencoba tersambung lagi...');
+            }
+        });
     initChat();
     initVoice();
+    let tick = 0;
     if (host)
-        hb = setInterval(push, 45000);
+        hb = setInterval(() => { if (!v.isConnected) return clearInterval(hb); if (!v.paused) send(); if (++tick % 11 === 0) dbPush(); }, 4000); // detak 4 detik: tamu yang meleset otomatis disamakan
 }
 
 // ---- suara peer-to-peer (WebRTC mesh, signaling lewat Supabase Realtime) ----
