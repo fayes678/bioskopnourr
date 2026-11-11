@@ -1781,6 +1781,8 @@ html:not([data-fx=high]) .bg,html:not([data-fx=high]) .beam,html:not([data-fx=hi
 
 .tag{background:var(--bl)!important;box-shadow:none!important}
 /* rating */
+.nwb{position:absolute;top:8px;left:8px;z-index:2;font-style:normal;font:800 .62rem var(--font);letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--ac);color:#14101f;box-shadow:0 2px 8px rgba(0,0,0,.35)}
+.tag + .nwb{top:30px}
 .rt{position:absolute;top:8px;right:8px;z-index:2;font-style:normal;font:700 .68rem var(--font);padding:3px 8px;border-radius:99px;background:var(--y);color:#14101f}
 .rate{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:6px 0 12px}
 .stars{display:flex;gap:2px}
@@ -2076,6 +2078,11 @@ html:not([data-fx=low]) .cc-m.new{animation:ccin .4s cubic-bezier(.2,.9,.3,1.15)
 .plnew input{margin:0;flex:1;min-width:0}
 
 /* ===== popup update baru ===== */
+.ntb{display:flex;align-items:center;gap:10px;width:100%;margin:10px 0;padding:10px 14px;border:1px solid var(--bd);border-radius:var(--r);color:var(--tx);text-align:left;cursor:pointer;font:inherit}
+.ntb b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ntb small{color:var(--mut);white-space:nowrap;font-size:.72rem}
+.ntb .nbadge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px 4px 9px;border-radius:99px;background:var(--ac);color:#14101f;font:700 .78rem var(--font)}
+.ntb .nbadge .ic{width:15px;height:15px}
 #nt{position:fixed;inset:0;z-index:260;display:grid;place-items:center;padding:20px;background:rgba(14,3,8,.55);animation:ntfade .3s both}
 #nt .nc{position:relative;width:min(92vw,400px);padding:22px 20px 20px;border:1px solid var(--bd);border-radius:var(--r);background:var(--bg2);overflow:hidden;box-shadow:var(--sh);animation:ntpop .5s cubic-bezier(.2,.9,.3,1.15) both}
 html[data-fx=high] #nt .nc{box-shadow:0 18px 50px rgba(10,2,6,.55),0 0 34px rgba(var(--glow),.25)}
@@ -3654,6 +3661,7 @@ async function boot() {
         ...p
     };
     me.avatar = me.avatar || 'kucing';
+    tab = 'home';
     await mtInit();
     if (MT.enabled && me.role !== 'admin')
         return;
@@ -3676,7 +3684,11 @@ async function boot() {
         const tq = new URLSearchParams(location.search).get('t');
         if (tq) openTitle(tq);
     }
+    // buka ulang / reload selalu mulai dari home: buang parameter link dan state riwayat sisa halaman film
+    try { history.replaceState(null, '', location.pathname); } catch (e) { }
 }
+// halaman dipulihkan browser dari cache (tab ditutup lalu dibuka lagi): mulai ulang dari home
+addEventListener('pageshow', e => { if (e.persisted) location.reload(); });
 
 function shell() {
     const T = [['home', 'home', 'Home'], ['discover', 'search', 'Discover'], ['history', 'clock', 'Riwayat'], ['dl', 'down', 'Unduhan'], ['room', 'film', 'Nobar'], ['more', 'sliders', 'Lainnya']];
@@ -3697,6 +3709,7 @@ async function go(t) {
     document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.t === t));
     moveInd();
     await views[t]();
+    if (t === 'home' && typeof ntBanner === 'function') ntBanner();
     window.scrollTo({ top: 0 });
 }
 
@@ -3706,7 +3719,10 @@ const sm = (u, w = 'w185') => u ? String(u).replace(/(image\.tmdb\.org\/t\/p\/)(
 let ratings = {}, myR = {}, vcount = {};
 const rtBadge = id => ratings[id] ? `<em class="rt">★ ${ratings[id].avg}</em>` : '';
 
-const poster = t => `<div class="poster" data-id="${t.id}" ${bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${t.type === 'series' ? '<em class="tag">Series</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
+// label "Baru" otomatis untuk film / series yang diupload dalam 7 hari terakhir
+const isNewTitle = t => { const d = Date.parse(t.created_at); return !isNaN(d) && Date.now() - d < 7 * 864e5 && d < Date.now() + 864e5; };
+
+const poster = t => `<div class="poster" data-id="${t.id}" ${bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${t.type === 'series' ? '<em class="tag">Series</em>' : ''}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
 
 const empty = m => `<div class="empty"><img class="eimg" src="img/chick.png" alt="">${m}</div>`;
 
@@ -4007,7 +4023,7 @@ const ensureNmpSprite = () => { if (!document.getElementById('np-sprite')) docum
 // semua listener dibersihkan lewat destroy() saat film ditutup / kembali ke detail.
 // ======================================================================
 const nmpHtml = (url, poster) => `<div class="nmp" id="nmp" data-playing="0">
-<video id="vid" data-src="${esc(url)}" playsinline webkit-playsinline x-webkit-airplay="allow" preload="metadata"></video>
+<video id="vid" data-src="${esc(url)}" playsinline webkit-playsinline autopictureinpicture x-webkit-airplay="allow" preload="metadata"></video>
 <div class="np-dim"></div>
 <div class="np-poster"${poster ? ` style="background-image:url('${esc(poster)}')"` : ''}></div>
 <div class="np-spin"></div><div class="np-hud"></div>
@@ -4137,11 +4153,20 @@ function nmPlayer(root, c) {
     on(document, 'fullscreenchange', applyLayout); on(document, 'webkitfullscreenchange', applyLayout);
     on(window, 'resize', applyLayout); on(window, 'orientationchange', applyLayout);
 
+    v.disablePictureInPicture = false; v.removeAttribute('disablepictureinpicture');
+    const pipOn = () => document.pictureInPictureElement === v || v.webkitPresentationMode === 'picture-in-picture';
+    const paintPip = () => { const b = q('[data-act="pip"]'); if (b) b.classList.toggle('np-on', pipOn()); };
+    on(v, 'enterpictureinpicture', paintPip); on(v, 'leavepictureinpicture', paintPip); on(v, 'webkitpresentationmodechanged', paintPip);
     async function pip() {
         try {
-            if (document.pictureInPictureElement) await document.exitPictureInPicture();
-            else if (document.pictureInPictureEnabled && !v.disablePictureInPicture) await v.requestPictureInPicture();
-            else if (v.webkitSetPresentationMode) v.webkitSetPresentationMode('picture-in-picture');
+            if (pipOn()) {
+                if (document.pictureInPictureElement) await document.exitPictureInPicture();
+                else v.webkitSetPresentationMode('inline');
+                return;
+            }
+            if (v.readyState < 1) return toast('Video belum siap, tunggu sebentar');
+            if (document.pictureInPictureEnabled && v.requestPictureInPicture) await v.requestPictureInPicture();
+            else if (v.webkitSupportsPresentationMode && v.webkitSupportsPresentationMode('picture-in-picture')) v.webkitSetPresentationMode('picture-in-picture');
             else toast('PiP tidak didukung browser ini');
         } catch (e) { toast('PiP belum bisa dipakai sekarang'); }
     }
@@ -4353,6 +4378,7 @@ function nmPlayer(root, c) {
         const h = (a, f) => { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) { } };
         h('play', togglePlay); h('pause', togglePlay); h('seekbackward', () => skip(-10)); h('seekforward', () => skip(10));
         h('nexttrack', nextEp() ? () => act('next') : null);
+        h('enterpictureinpicture', () => { if (!pipOn()) pip(); }); // PiP otomatis saat pindah tab / aplikasi (browser yang mendukung)
     }
 
     // ---------- sinkron dengan film (dipanggil saat ganti episode/kualitas) ----------
@@ -5009,8 +5035,11 @@ async function sendFeedback() {
 async function playIntro(replay) {
     $('#splash')?.remove();
     const brand = $('.brand');
+    const nav0 = (performance.getEntriesByType && performance.getEntriesByType('navigation')[0]) || {};
+    if (!replay && (nav0.type === 'reload' || sessionStorage.nm_intro_done)) { try { sessionStorage.nm_intro_done = '1'; } catch (e) { } return; }
     if ((localStorage.nm_intro === '0' && !replay) || matchMedia('(prefers-reduced-motion: reduce)').matches || !brand)
         return;
+    try { sessionStorage.nm_intro_done = '1'; } catch (e) { }
     window.scrollTo({ top: 0 });
     const box = document.createElement('div');
     box.id = 'intro';
@@ -6447,10 +6476,41 @@ function ntShow(n) {
     }
 }
 
+// pengumuman aktif 7 hari sejak admin menyimpan, setelah itu hilang sendiri
+const NT_MS = 7 * 864e5;
+let NT_CUR = null;
+const ntLive = n => {
+    if (!n || !n.enabled || !(n.body || '').trim()) return false;
+    const t = Date.parse(n.updated_at);
+    return isNaN(t) || Date.now() - t < NT_MS;
+};
+const ntLeft = n => { const t = Date.parse(n.updated_at); return isNaN(t) ? 7 : Math.max(1, Math.ceil((t + NT_MS - Date.now()) / 864e5)); };
+
+function ntBanner() {
+    const old = document.getElementById('ntb');
+    if (old) old.remove();
+    if (!NT_CUR || tab !== 'home') return;
+    const h = document.getElementById('hero');
+    if (!h) return;
+    h.insertAdjacentHTML('beforebegin', `<button class="ntb glass" id="ntb" onclick="ntShow({...NT_CUR,auto_secs:0})"><span class="nbadge">${ic('sparkle')} Baru</span><b>${esc(NT_CUR.title || 'Update baru')}</b><small>${ntLeft(NT_CUR)} hari lagi</small></button>`);
+}
+
+// admin menyimpan pengumuman -> pengguna yang sedang online langsung dapat popup; cek lagi saat kembali ke tab dan tiap 5 menit
+function ntWatch() {
+    if (ntWatch.on) return;
+    ntWatch.on = true;
+    try { sb.channel('nt-live').on('postgres_changes', { event: '*', schema: 'public', table: 'app_notice' }, () => showNotice()).subscribe(); } catch (e) { }
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) showNotice(); });
+    setInterval(() => { if (!document.hidden) showNotice(); }, 300000);
+}
+
 async function showNotice() {
+    ntWatch();
     if (document.getElementById('nt')) return;
     const n = await ntGet();
-    if (!n.enabled || !(n.body || '').trim()) return;
+    NT_CUR = ntLive(n) ? n : null;
+    ntBanner();
+    if (!NT_CUR) return;
     const ver = String(n.updated_at || n.title + '|' + n.body);
     if (localStorage.nm_notice_seen === ver) return;
     localStorage.nm_notice_seen = ver;
@@ -6459,7 +6519,7 @@ async function showNotice() {
 
 /* ---- panel admin ---- */
 function noticeForm() {
-    return `<div class="glass pad"><p class="hint">Pesan ini muncul sekali ke setiap pengguna setelah loading selesai. Setiap kali kamu menyimpan, pesan dianggap baru dan muncul lagi.</p>
+    return `<div class="glass pad"><p class="hint">Pesan ini muncul sekali ke semua pengguna (baru maupun lama) sebagai popup, dan tetap terlihat sebagai kartu Baru di Home selama 7 hari sejak disimpan, lalu hilang sendiri. Pengguna yang sedang online langsung menerimanya. Setiap kali kamu menyimpan, pesan dianggap baru dan hitungan 7 hari mulai lagi.</p>
 <div class="srow"><div><b>Tampilkan popup</b><small>Matikan untuk menyembunyikan dari semua pengguna</small></div><button class="sw" id="n_on" role="switch" aria-checked="false" onclick="setSw(this,!this.classList.contains('on'))"></button></div>
 <div class="fgrid"><label class="fld"><span>Judul</span><input id="n_t" maxlength="60" placeholder="Update baru"></label>
 <label class="fld"><span>Teks tombol</span><input id="n_ok" maxlength="20" placeholder="OK"></label>
@@ -6474,6 +6534,7 @@ async function loadNotice() {
     setSw(document.getElementById('n_on'), !!n.enabled);
     n_t.value = n.title || ''; n_ok.value = n.ok_label || ''; n_s.value = n.auto_secs ?? 10; n_b.value = n.body || '';
     if (n._local) n_msg.textContent = 'Tabel app_notice belum ada di Supabase. Pesan yang tersimpan hanya berlaku di perangkat ini.';
+    else if (n.enabled && (n.body || '').trim() && n.updated_at) n_msg.textContent = ntLive(n) ? `Sedang tampil, sisa ${ntLeft(n)} hari.` : 'Sudah lewat 7 hari dan disembunyikan. Simpan ulang untuk menampilkannya lagi.';
 }
 
 function noticeRead() {
