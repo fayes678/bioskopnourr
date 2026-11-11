@@ -710,6 +710,33 @@ main h2, .sheet h2 {
   .two { grid-template-columns: 1fr 1fr; }
 }
 
+
+/* ===== Beranda ala Netflix ===== */
+.nfpills{display:flex;gap:8px;overflow-x:auto;padding:6px 2px 10px!important;margin:0!important;scrollbar-width:none;scroll-snap-type:none!important}
+.rw-on .rw-b{display:grid;opacity:1;width:34px;height:34px;top:calc(50% - 2px);box-shadow:0 4px 14px rgba(0,0,0,.5)}
+.rw-on .rw-b.rw-l{left:0}.rw-on .rw-b.rw-r{right:0}
+.rw-on .rw-b[hidden]{display:none!important}
+.nfpills::-webkit-scrollbar{display:none}
+.nfpills .chip{flex:none}
+.nfr h2{display:flex;align-items:center;gap:8px}
+.nfr .nfall{margin-left:auto;background:none;border:0;color:var(--ac2,var(--ac));font:600 .8rem var(--font);cursor:pointer;opacity:.85}
+.nfr .nfall:hover{opacity:1}
+.nfr .row .poster{position:relative}
+.nfbar{position:absolute;left:8px;right:8px;bottom:8px;height:4px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden;z-index:3}
+.nfbar i{display:block;height:100%;background:var(--ac)}
+.t10{position:relative;flex:0 0 auto;display:flex;align-items:flex-end;padding-left:34px;scroll-snap-align:start}
+.t10>b{position:absolute;left:-2px;bottom:-6px;font:900 6.2rem/1 var(--font);color:transparent;-webkit-text-stroke:3px var(--ac);letter-spacing:-.08em;z-index:0;pointer-events:none}
+.t10 .poster{position:relative;z-index:1;flex:0 0 118px!important}
+@media(min-width:900px){
+.row .poster{flex-basis:172px!important}
+.t10 .poster{flex-basis:150px!important}
+.t10{padding-left:54px}.t10>b{font-size:8.5rem}
+.hero{min-height:clamp(340px,46vh,520px);padding:38px 42px}
+.hero h1{font-size:clamp(2rem,3.4vw,3rem)}
+.hero p{max-width:620px}
+.nfr h2{font-size:1.25rem;margin-top:12px}
+}
+
 /* ============ HERO ============ */
 .hero {
   position: relative;
@@ -955,6 +982,7 @@ main h2, .sheet h2 {
   margin: 6px 0 12px;
   padding: 4px 2px;
   scrollbar-width: none;
+  scroll-snap-type: none;
 }
 
 .chip {
@@ -2265,6 +2293,7 @@ html[data-fx=low] #nt,html[data-fx=low] #nt .nc{animation:none}
 .nmp .np-btn.np-g{background:var(--np-chip)}
 .nmp .np-nextbox{position:absolute;right:16px;bottom:70px;z-index:8;background:#000d;border-radius:12px;padding:12px 14px;display:none;gap:10px;align-items:center;font-size:14px}
 .nmp .np-nextbox.np-on{display:flex}
+.nmp .np-sub{position:absolute;left:50%;bottom:12%;transform:translateX(-50%);max-width:88%;text-align:center;color:#fff;background:rgba(0,0,0,.62);padding:3px 10px;border-radius:4px;line-height:1.35;white-space:pre-line;pointer-events:none;z-index:6}
 .nmp .np-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#2b2c33;color:#fff;border-radius:20px;padding:9px 18px;font-size:14px;z-index:300;display:none;max-width:86vw;text-align:center}
 .nmp .np-toast.np-on{display:block}
 .nmp .np-shbg{position:fixed;inset:0;background:#0008;z-index:200;display:none}
@@ -2335,6 +2364,32 @@ html[data-fx=low] #nt,html[data-fx=low] #nt .nc{animation:none}
 .pps b{color:var(--tx)}
 .fpb .cchat{max-height:none;min-height:420px;height:calc(100dvh - 300px);margin:0}
 @media(min-width:960px){.fpb{max-width:760px;grid-template-columns:minmax(0,1fr)}.fpb>.cchat{grid-column:1;grid-row:auto;position:relative;top:auto}}
+/* ===== laptop / PC: pemutar 16:9 rapi, rata dengan kolom konten ===== */
+@media(min-width:760px){
+.fvid.npw{background:var(--bg);padding:0}
+.fvid.npw .nmp:not(.np-fs){width:100%;max-width:none;margin:0;border-radius:0;box-shadow:none;overflow:hidden;max-height:calc(100vh - 64px);max-height:calc(100dvh - 64px)}
+.fvid.npw .nmp video{object-fit:contain}
+.fpb{max-width:1040px;padding-top:12px;margin:0 auto}
+.fpb>.ptabs{max-width:100%}
+}
+@media(min-width:760px){
+.fvid.npw .nmp:not(.np-fs) .np-top{padding:16px 22px 8px;gap:12px}
+.fvid.npw .nmp:not(.np-fs) .np-bot.np-mini{padding:10px 22px 16px;gap:10px}
+.fvid.npw .nmp:not(.np-fs) .np-ib{width:44px;height:44px}
+.fvid.npw .nmp:not(.np-fs) .np-qchip{padding:7px 14px;font-size:14px}
+.fvid.npw .nmp:not(.np-fs) .np-tm{font-size:14px}
+.fvid.npw .nmp:not(.np-fs) .np-mid .np-ib{width:64px;height:64px}
+.fvid.npw .nmp:not(.np-fs) .np-sub{bottom:16%}
+}
+/* PC: pemutar tidak ikut menempel saat scroll; kontrol selalu terbaca di atas gambar terang */
+@media(min-width:760px){
+.fvid.npw{position:relative;top:auto;z-index:1}
+}
+.fvid.npw .nmp:not(.np-fs) .np-top{background:rgba(0,0,0,.5)}
+.fvid.npw .nmp:not(.np-fs) .np-bot.np-mini{background:rgba(0,0,0,.5)}
+.fvid.npw .nmp:not(.np-fs) .np-ui .np-i,.fvid.npw .nmp:not(.np-fs) .np-tm,.fvid.npw .nmp:not(.np-fs) .np-qchip{color:#fff;filter:drop-shadow(0 1px 2px rgba(0,0,0,.8))}
+.fvid.npw .nmp:not(.np-fs) .np-mid .np-ib{background:rgba(0,0,0,.45)}
+@media(min-width:1280px){.fpb{max-width:1180px}}
 </style>
 <style id="dt-css">
 /* ===== halaman detail judul (sebelum pemutar) ===== */
@@ -3852,8 +3907,40 @@ const views = {
         }
         const feat = titles.slice(0, 5);
         const mv = titles.filter(t => t.type !== 'series'), sr = titles.filter(t => t.type === 'series');
-        const rowOf = (ico, name, l) => l.length ? `<h2>${ic(ico)} ${name}</h2><div class="row">${l.map(poster).join('')}</div>` : '';
-        $('#v').innerHTML = `<p class="hi">Halo, <b class="gt">${esc(me.username)}</b> ${ic('heart')}</p><p class="sub">Mau nonton apa hari ini? <button class="btn sm ghost" onclick="randomPick()">${ic('sparkle')} Acak film</button></p><nav class="shelf shelf-m" aria-label="Koleksi">${shelfBtns()}</nav><div class="hero glass" id="hero"></div>${rowOf('star', 'Rating tertinggi', titles.filter(t => ratings[t.id]).sort((a, b) => ratings[b.id].avg - ratings[a.id].avg || ratings[b.id].n - ratings[a.id].n).slice(0, 10))}${rowOf('sparkle', 'Baru ditambahkan', titles)}${mv.length && sr.length ? rowOf('film', 'Film', mv) + rowOf('tv', 'Series', sr) : ''}`;
+        const rt = t => ratings[t.id] ? ratings[t.id].avg : 0, vw = t => vcount[t.id] || 0;
+        const gcount = {};
+        titles.forEach(t => (t.genre || '').split(',').map(x => x.trim()).filter(Boolean).forEach(g => (gcount[g] = gcount[g] || []).push(t)));
+        const gens = Object.entries(gcount).sort((x, y) => y[1].length - x[1].length).slice(0, 8);
+        const cats = {};
+        titles.forEach(t => { const c = catLabel(t); if (c) (cats[c] = cats[c] || []).push(t); });
+        const top10 = [...titles].sort((x, y) => vw(y) - vw(x) || rt(y) - rt(x) || 0).slice(0, 10);
+        const trend = titles.filter(t => vw(t) > 0).sort((x, y) => vw(y) - vw(x)).slice(0, 20);
+        const rated = titles.filter(t => ratings[t.id]).sort((x, y) => rt(y) - rt(x) || ratings[y.id].n - ratings[x.id].n).slice(0, 20);
+        const yrs = titles.filter(t => +t.year).sort((x, y) => y.year - x.year).slice(0, 20);
+        const R = [];
+        const add = (ico, name, l, g, extra) => { if (l && l.length) R.push({ ico, name, l: l.slice(0, 20), g: g || '', extra: extra || '' }); };
+        R.push({ top: top10 });
+        add('star', 'Rating tertinggi', rated);
+        add('sparkle', 'Baru ditambahkan', titles);
+        add('film', 'Lagi tren', trend.length > 3 ? trend : []);
+        gens.forEach(([g, l]) => l.length >= 2 && add('film', g, l, g));
+        Object.entries(cats).forEach(([c, l]) => l.length >= 2 && !gcount[c] && add('tv', c, l, c));
+        if (mv.length && sr.length) { add('film', 'Film', mv, 'Film'); add('tv', 'Series', sr, 'Series'); }
+        add('clock', 'Rilis terbaru', yrs.length > 3 ? yrs : []);
+        const rowHtml = r => r.top ? `<section class="nfr nfr-top"><h2>${ic('star')} Top 10 di NauMovie</h2><div class="row">${r.top.map((t, i) => `<div class="t10"><b>${i + 1}</b>${poster(t)}</div>`).join('')}</div></section>`
+            : `<section class="nfr"><h2>${ic(r.ico)} ${esc(r.name)}${r.g ? `<button class="nfall" onclick="nfGo('${esc(r.g).replace(/'/g, "\\'")}')">Lihat semua ›</button>` : ''}</h2><div class="row">${r.l.map(poster).join('')}</div></section>`;
+        const pills = `<nav class="nfpills row" aria-label="Kategori">${[['Semua', ''], ['Film', 'Film'], ['Series', 'Series'], ...gens.map(([g]) => [g, g])].map(([n, g]) => `<button class="chip" onclick="nfGo('${esc(g).replace(/'/g, "\\'")}')">${esc(n)}</button>`).join('')}</nav>`;
+        $('#v').innerHTML = `<p class="hi">Halo, <b class="gt">${esc(me.username)}</b> ${ic('heart')}</p><p class="sub">Mau nonton apa hari ini? <button class="btn sm ghost" onclick="randomPick()">${ic('sparkle')} Acak film</button></p><nav class="shelf shelf-m" aria-label="Koleksi">${shelfBtns()}</nav>${pills}<div class="hero glass" id="hero"></div><div id="nfrows">${R.slice(0, 4).map(rowHtml).join('')}</div><div id="nfmore"></div>`;
+        // baris sisanya dimuat saat mendekati layar (ringan untuk perangkat lemah)
+        const rest = R.slice(4);
+        if (rest.length) {
+            const box = $('#nfmore'); let n = 0;
+            const more = () => { if (!box.isConnected) return; rest.slice(n, n + 3).forEach(r => box.insertAdjacentHTML('beforeend', rowHtml(r))); n += 3; if (n >= rest.length) { io && io.disconnect(); sent.remove(); } };
+            const sent = document.createElement('div'); sent.style.height = '1px'; box.after(sent);
+            let io = null;
+            if ('IntersectionObserver' in window) { io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) more(); }, { rootMargin: '700px' }); io.observe(sent); }
+            else while (n < rest.length) more();
+        }
         heroShow(0, feat);
         contRow();
         if (feat.length > 1)
@@ -3863,7 +3950,7 @@ const views = {
         const cats = [...new Set(titles.map(catLabel).filter(Boolean))];
         const gs = ['Semua', ...cats, ...new Set(titles.flatMap(t => (t.genre || '').split(',').map(x => x.trim()).filter(Boolean)).filter(x => !cats.includes(x)))];
         const grid = () => titles.filter(t => t.title.toLowerCase().includes(q.toLowerCase()) && (g === 'Semua' || catLabel(t) === g || (t.genre || '').includes(g))).map(poster).join('') || empty('Ga ketemu');
-        $('#v').innerHTML = `<div class="sbox">${ic('search')}<input id="q" placeholder="Cari film / series..." value="${esc(q)}" autocomplete="off"></div><div class="chips">${gs.map(x => `<button class="chip ${x === g ? 'on' : ''}" data-g="${esc(x)}">${esc(x)}</button>`).join('')}</div><div class="grid" id="gr">${grid()}</div>`;
+        $('#v').innerHTML = `<div class="sbox">${ic('search')}<input id="q" placeholder="Cari film / series..." value="${esc(q)}" autocomplete="off"></div><div class="chips row">${gs.map(x => `<button class="chip ${x === g ? 'on' : ''}" data-g="${esc(x)}">${esc(x)}</button>`).join('')}</div><div class="grid" id="gr">${grid()}</div>`;
         $('#q').oninput = e => {
             q = e.target.value;
             $('#gr').innerHTML = grid();
@@ -4065,6 +4152,8 @@ const loadYtApi = () => ytApiP || (ytApiP = new Promise((ok, no) => {
 }));
 const YT_PROPS = ['currentTime', 'duration', 'paused', 'ended', 'seeking', 'readyState', 'volume', 'muted', 'playbackRate', 'buffered', 'error', 'play', 'pause', 'load', 'videoWidth'];
 
+const YQ_LBL = { highres: '4320p', hd2160: '2160p', hd1440: '1440p', hd1080: '1080p', hd720: '720p', large: '480p', medium: '360p', small: '240p', tiny: '144p' };
+
 function ytDetach(v) {
     const y = v._yt; if (!y) return;
     clearInterval(y.tm);
@@ -4072,6 +4161,7 @@ function ytDetach(v) {
     if (y.host && y.host.isConnected) y.host.remove();
     YT_PROPS.forEach(k => { try { delete v[k]; } catch (e) { } });
     v.style.visibility = '';
+    v._ytq = null;
     v._yt = null;
 }
 
@@ -4105,17 +4195,36 @@ function ytAttach(v, p, at) {
     def('play', { value: () => { y.want = true; try { y.ready && y.pl.playVideo(); } catch (e) { } return Promise.resolve(); } });
     def('pause', { value: () => { y.want = false; try { y.ready && y.pl.pauseVideo(); } catch (e) { } } });
     def('load', { value: () => { } });
+    // kualitas diatur dari pemutar sendiri (best-effort: YouTube boleh mengabaikan, terutama di HP)
+    v._ytq = {
+        list: () => { try { return (y.pl.getAvailableQualityLevels() || []).filter(q => YQ_LBL[q]); } catch (e) { return []; } },
+        set: (q, silent) => {
+            y.qpref = q;
+            const apply = () => {
+                try {
+                    if (q === 'auto') { y.pl.setPlaybackQuality('default'); y.pl.setPlaybackQualityRange && y.pl.setPlaybackQualityRange('tiny', 'highres'); }
+                    else if (y.pl.setPlaybackQualityRange) y.pl.setPlaybackQualityRange(q, q);
+                    else y.pl.setPlaybackQuality(q);
+                } catch (e) { }
+            };
+            apply(); setTimeout(apply, 700); setTimeout(apply, 2200);
+        }
+    };
+    try { const sq = localStorage.nm_ytq; if (sq && sq !== 'auto') y.qpref = sq; } catch (e) { }
     const startAt = Math.floor(at > 0 ? at : (p.start || 0));
     loadYtApi().then(() => {
         if (!live()) return;
         const vars = { controls: 0, disablekb: 1, fs: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, cc_load_policy: 0, origin: location.origin, enablejsapi: 1, start: startAt };
-        const cfg = { width: '100%', height: '100%', playerVars: vars, events: {} };
+        // youtube-nocookie: tanpa cookie pelacak, iklan lebih sedikit & tidak dipersonalisasi (iklan bawaan video berlisensi tetap bisa muncul)
+        const cfg = { width: '100%', height: '100%', host: 'https://www.youtube-nocookie.com', playerVars: vars, events: {} };
         if (p.id) { cfg.videoId = p.id; if (p.list) vars.list = p.list; } else { vars.listType = 'playlist'; vars.list = p.list; }
         cfg.events.onReady = () => {
             if (!live()) return;
             y.ready = true;
-            const f = y.pl.getIframe(); if (f) { f.style.cssText = 'width:100%;height:100%;border:0;pointer-events:none'; f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture'); }
+            const f = y.pl.getIframe(); if (f) { f.style.cssText = 'width:100%;height:100%;border:0;pointer-events:none;transform:scale(var(--ytz,1.12));transform-origin:50% 50%'; f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture'); }
             try { y.pl.setVolume(y.vol * 100); y.mute && y.pl.mute(); y.rate !== 1 && y.pl.setPlaybackRate(y.rate); } catch (e) { }
+            // subtitle bawaan YouTube dimatikan; subtitle ditampilkan oleh pemutar sendiri (overlay NMP)
+            try { y.pl.unloadModule('captions'); y.pl.unloadModule('cc'); } catch (e) { }
             fire('loadedmetadata'); fire('durationchange'); fire('canplay');
             if (y.pend != null) { const t = y.pend; y.pend = null; v.currentTime = t; }
             if (y.want) { try { y.pl.playVideo(); } catch (e) { } }
@@ -4123,10 +4232,17 @@ function ytAttach(v, p, at) {
         cfg.events.onStateChange = e => {
             if (!live()) return;
             const s = e.data, prev = y.st; y.st = s;
-            if (s === 1) { fire('canplay'); fire('play'); fire('playing'); fire('durationchange'); }
+            const ifr = (() => { try { return y.pl.getIframe(); } catch (e) { return null; } })();
+            if (s === 1) {
+                if (ifr) ifr.style.visibility = '';
+                try { y.pl.unloadModule('captions'); } catch (e) { }
+                if (y.qpref && !y.qdone) { y.qdone = 1; v._ytq.set(y.qpref, true); }
+                fire('canplay'); fire('play'); fire('playing'); fire('durationchange');
+            }
             else if (s === 2) fire('pause');
             else if (s === 3) fire('waiting');
-            else if (s === 0) { y.want = false; fire('pause'); fire('timeupdate'); fire('ended'); }
+            // video selesai: tutup layar rekomendasi YouTube dengan layar hitam
+            else if (s === 0) { y.want = false; if (ifr) ifr.style.visibility = 'hidden'; fire('pause'); fire('timeupdate'); fire('ended'); }
             else if (s === 5 && prev !== 5) fire('canplay');
         };
         cfg.events.onError = e => {
@@ -4305,6 +4421,7 @@ const nmpHtml = (url, poster) => `<div class="nmp" id="nmp" data-playing="0">
 </div></div>
 <div class="np-shbg"></div>
 <div class="np-sheet"><h3 class="np-sht"></h3><div class="np-shl"></div></div>
+<div class="np-sub" style="display:none"></div>
 <div class="np-toast"></div>
 </div>`;
 
@@ -4317,8 +4434,10 @@ function nmPlayer(root, c) {
     const fmt = t => { t = Math.max(0, Math.floor(t || 0)); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60, p = n => String(n).padStart(2, '0'); return (h ? h + ':' : '') + p(m) + ':' + p(s); };
     const lsGet = (k, d) => { try { const x = localStorage.getItem(k); return x == null ? d : JSON.parse(x); } catch (e) { return d; } };
     const lsSet = (k, x) => { try { localStorage.setItem(k, JSON.stringify(x)); } catch (e) { } };
-    const prefs = Object.assign({ loop: false, fit: 'contain', rate: 1 }, lsGet('nm_pp', {}));
+    const prefs = Object.assign({ loop: false, fit: 'contain', rate: 1, subon: true, subsz: 'm', ytclean: true }, lsGet('nm_pp', {}));
     const savePrefs = () => lsSet('nm_pp', prefs);
+    const applyYtClean = () => root.style.setProperty('--ytz', prefs.ytclean ? '1.12' : '1');
+    applyYtClean();
 
     let locked = false, bri = 78, vol = 100, sleepT = null, sheetOpen = false, dragging = false, pfs = false;
     let hideT, toastT, hudT, nextCd, g = null, lastTap = 0, tapT, dead = false;
@@ -4350,14 +4469,19 @@ function nmPlayer(root, c) {
 
     // ---------- helper sumber ----------
     const srcs = () => c.srcs();
-    const curRes = () => { const s = srcs().find(x => x.url === c.curUrl()); return s ? String(s.res).toUpperCase() : 'AUTO'; };
+    const ytqPref = () => { try { return localStorage.nm_ytq || 'auto'; } catch (e) { return 'auto'; } };
+    const curRes = () => {
+        if (v._yt) { const k = ytqPref(); return k === 'auto' ? 'AUTO' : (YQ_LBL[k] || 'AUTO').toUpperCase(); }
+        const s = srcs().find(x => x.url === c.curUrl()); return s ? String(s.res).toUpperCase() : 'AUTO';
+    };
     const paintQ = () => { q('.np-qmini').textContent = q('.np-qfull').textContent = curRes(); };
     const canCtl = () => { if (!c.quiet()) { toast('Hanya host yang mengatur pemutaran'); return false; } return true; };
     const nextEp = () => { const ep = c.curEp(), l = c.eps(); if (!ep) return null; const i = l.findIndex(x => x.id == ep.id); return l[i + 1] || null; };
 
     // ---------- aksi ----------
-    const togglePlay = () => { if (!canCtl()) return; v.paused ? v.play().catch(() => toast('Tap layar untuk memutar')) : v.pause(); };
-    const skip = d => { if (!canCtl()) return; v.currentTime = clamp((v.currentTime || 0) + d, 0, v.duration || 1e9); hud((d > 0 ? '+' : '') + d + ' dtk'); };
+    const gcmd = o => { if (c.quiet()) return false; if (c.guestCmd) { c.guestCmd(o); toast(o.a === 'skip' ? (o.d > 0 ? 'Minta maju ke host…' : 'Minta mundur ke host…') : 'Permintaan dikirim ke host…'); } else canCtl(); return true; };
+    const togglePlay = () => { if (gcmd({ a: v.paused ? 'play' : 'pause' })) return; v.paused ? v.play().catch(() => toast('Tap layar untuk memutar')) : v.pause(); };
+    const skip = d => { if (gcmd({ a: 'skip', d })) return; v.currentTime = clamp((v.currentTime || 0) + d, 0, v.duration || 1e9); hud((d > 0 ? '+' : '') + d + ' dtk'); };
     const isFs = () => root.classList.contains('np-fs');
     const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
 
@@ -4425,7 +4549,22 @@ function nmPlayer(root, c) {
     }
 
     // ---------- sheet: kualitas, episode, kecepatan, timer tidur, pengaturan, subtitle ----------
-    const qualitySheet = () => !canCtl() ? 0 : srcs().length < 2 ? toast('Hanya ada satu kualitas untuk video ini') : openSheet('Kualitas', srcs().map(s => ({ l: String(s.res).toUpperCase(), on: s.url === c.curUrl(), fn: () => { if (s.url !== c.curUrl()) { c.setRes(s); } } })));
+    const qualitySheet = () => {
+        if (!canCtl()) return;
+        const own = srcs().filter(s => !isYt(s.url)), items = [];
+        // 1) kualitas sumber sendiri (mp4 / m3u8 yang kamu isi di admin): selalu patuh
+        own.forEach(s => items.push({ l: String(s.res).toUpperCase(), s: 'Sumber sendiri', on: s.url === c.curUrl(), fn: () => { if (s.url !== c.curUrl()) c.setRes(s); } }));
+        // 2) sumber YouTube: pilih sumber YouTube-nya atau atur kualitas internalnya
+        srcs().filter(s => isYt(s.url)).forEach(s => items.push({ l: 'YouTube', s: 'Pakai sumber ini', on: s.url === c.curUrl(), fn: () => { if (s.url !== c.curUrl()) c.setRes(s); } }));
+        if (v._yt && v._ytq) {
+            const k = ytqPref(), lv = v._ytq.list(), list = lv.length ? lv : ['hd1080', 'hd720', 'large', 'medium', 'small', 'tiny'];
+            items.push({ l: 'Kualitas video YouTube', s: 'Tidak dijamin', keep: 1, fn: () => { } });
+            items.push({ l: 'Auto', on: k === 'auto', fn: () => { try { localStorage.nm_ytq = 'auto'; } catch (e) { } v._ytq.set('auto'); paintQ(); toast('Kualitas YouTube: Auto'); } });
+            list.forEach(x => items.push({ l: YQ_LBL[x], on: k === x, fn: () => { try { localStorage.nm_ytq = x; } catch (e) { } v._ytq.set(x); paintQ(); toast('Kualitas diminta: ' + YQ_LBL[x] + ' (YouTube bisa menyesuaikan)'); } }));
+        }
+        if (items.filter(i => i.s !== 'Tidak dijamin').length < 2 && !v._yt) return toast('Hanya ada satu kualitas untuk video ini');
+        openSheet('Kualitas', items);
+    };
     const episodesSheet = () => {
         const l = c.eps(), ep = c.curEp();
         openSheet('Episode', l.map(e => ({ l: `Ep ${e.number}${e.name ? ' · ' + e.name : ''}`, s: l.some(x => x.season !== l[0].season) ? 'S' + e.season : '', on: ep && e.id == ep.id, fn: () => pickEp(e) })));
@@ -4444,27 +4583,72 @@ function nmPlayer(root, c) {
             { l: 'Timer tidur', keep: 1, fn: sleepSheet },
             { l: 'Putar episode berikutnya otomatis', s: auto ? 'Aktif' : 'Mati', keep: 1, fn: () => { localStorage.nm_auto = auto ? '0' : '1'; moreSheet(); } },
             { l: 'Ulangi video', s: prefs.loop ? 'Aktif' : 'Mati', keep: 1, fn: () => { prefs.loop = !prefs.loop; v.loop = prefs.loop; savePrefs(); moreSheet(); } },
+            { l: 'Sembunyikan judul & logo YouTube', s: prefs.ytclean ? 'Aktif' : 'Mati', keep: 1, fn: () => { prefs.ytclean = !prefs.ytclean; applyYtClean(); savePrefs(); moreSheet(); } },
         ]);
     }
-    const subIn = Object.assign(document.createElement('input'), { type: 'file', accept: '.vtt,.srt,text/vtt' });
+    // ---- Subtitle sendiri (overlay) : bekerja untuk mp4/m3u8 maupun YouTube ----
+    const subIn = Object.assign(document.createElement('input'), { type: 'file', accept: '.vtt,.srt,text/vtt,text/plain' });
     subIn.hidden = true; root.append(subIn);
+    const SZ = { s: '14px', m: '18px', l: '24px' }, SZL = { s: 'Kecil', m: 'Sedang', l: 'Besar' };
+    let cues = [], subName = '', subOff = 0, subIdx = -1;
+    const subKey = () => 'nm_sub_' + (c.key ? c.key() : c.curUrl());
+    const tsec = t => { const m = /(?:(\d+):)?(\d+):(\d+)[.,](\d+)/.exec(t); return m ? (+(m[1] || 0)) * 3600 + (+m[2]) * 60 + (+m[3]) + (+('0.' + m[4])) : 0; };
+    function parseSub(txt) {
+        const out = [];
+        txt.replace(/\r/g, '').replace(/^﻿/, '').split(/\n{2,}/).forEach(b => {
+            const ln = b.split('\n'), i = ln.findIndex(x => x.includes('-->')); if (i < 0) return;
+            const [a1, b1] = ln[i].split('-->'); const body = ln.slice(i + 1).join('\n').replace(/<[^>]+>/g, '').replace(/\{[^}]*\}/g, '').trim();
+            if (body) out.push({ a: tsec(a1), b: tsec(b1), t: body });
+        });
+        return out.sort((x, y) => x.a - y.a);
+    }
+    const subEl = () => q('.np-sub');
+    function paintSub() {
+        const e = subEl(); if (!e) return;
+        e.style.fontSize = SZ[prefs.subsz] || SZ.m;
+        const t = v.currentTime - subOff; let txt = '';
+        if (prefs.subon && cues.length) {
+            const k = cues.find(x => t >= x.a && t <= x.b); if (k) txt = k.t;
+        }
+        if (e.textContent !== txt) e.textContent = txt;
+        e.style.display = txt ? 'block' : 'none';
+        q('.np-ccb').style.color = (cues.length && prefs.subon) ? 'var(--ac2)' : '';
+    }
+    function setCues(txt, name, save) {
+        cues = parseSub(txt); subName = name || 'Subtitle';
+        if (!cues.length) { subName = ''; return toast('Subtitle tidak terbaca (pakai .srt / .vtt)'); }
+        if (save) { try { localStorage[subKey()] = JSON.stringify({ n: subName, t: txt.length < 400000 ? txt : '' }); } catch (e) { } }
+        prefs.subon = true; savePrefs(); paintSub(); toast('Subtitle dimuat: ' + subName);
+    }
+    function clearSub() { cues = []; subName = ''; try { localStorage.removeItem(subKey()); } catch (e) { } paintSub(); }
+    function loadSavedSub() {
+        cues = []; subName = ''; subOff = 0;
+        try { const d = JSON.parse(localStorage[subKey()] || 'null'); if (d && d.t) { cues = parseSub(d.t); subName = d.n; } } catch (e) { }
+        paintSub();
+    }
+    v.addEventListener('timeupdate', paintSub); v.addEventListener('seeked', paintSub);
+    async function subFromUrl() {
+        const u = prompt('Tempel link subtitle (.srt / .vtt):'); if (!u) return;
+        try { const r = await fetch(u); if (!r.ok) throw 0; setCues(await r.text(), u.split('/').pop().split('?')[0] || 'Subtitle', true); }
+        catch (e) { toast('Gagal mengambil subtitle (link tidak bisa diakses / diblok CORS)'); }
+    }
     function ccSheet() {
-        const tr = [...v.textTracks].filter(t => t.kind === 'subtitles' || t.kind === 'captions');
-        const items = [{ l: 'Mati', on: !tr.some(t => t.mode === 'showing'), fn: () => { tr.forEach(t => t.mode = 'hidden'); q('.np-ccb').style.color = ''; } }];
-        tr.forEach(t => items.push({ l: t.label || t.language || 'Subtitle', on: t.mode === 'showing', fn: () => { tr.forEach(x => x.mode = x === t ? 'showing' : 'hidden'); q('.np-ccb').style.color = 'var(--ac2)'; } }));
-        items.push({ l: 'Muat dari file (.vtt / .srt)…', fn: () => subIn.click() });
+        const items = [
+            { l: 'Subtitle', s: prefs.subon ? 'Aktif' : 'Mati', keep: 1, fn: () => { prefs.subon = !prefs.subon; savePrefs(); paintSub(); ccSheet(); } },
+            { l: 'Muat dari file (.srt / .vtt)…', s: subName || 'Belum ada', fn: () => subIn.click() },
+            { l: 'Muat dari link…', fn: subFromUrl },
+            { l: 'Ukuran teks', s: SZL[prefs.subsz] || 'Sedang', keep: 1, fn: () => { const o = ['s', 'm', 'l']; prefs.subsz = o[(o.indexOf(prefs.subsz) + 1) % 3]; savePrefs(); paintSub(); ccSheet(); } },
+            { l: 'Geser waktu', s: (subOff > 0 ? '+' : '') + subOff.toFixed(1) + ' dtk (muncul lebih lambat +)', keep: 1, fn: () => { subOff = Math.round((subOff + 0.5) * 10) / 10; paintSub(); ccSheet(); } },
+            { l: 'Geser waktu (kurangi)', s: 'Muncul lebih cepat', keep: 1, fn: () => { subOff = Math.round((subOff - 0.5) * 10) / 10; paintSub(); ccSheet(); } },
+        ];
+        if (cues.length) items.push({ l: 'Hapus subtitle', fn: () => { clearSub(); toast('Subtitle dihapus'); } });
         openSheet('Subtitle', items);
     }
     subIn.onchange = async () => {
         const f = subIn.files[0]; if (!f) return;
-        let t = await f.text();
-        if (!/^WEBVTT/.test(t.trim())) t = 'WEBVTT\n\n' + t.replace(/\r/g, '').replace(/(\d+:\d+:\d+),(\d+)/g, '$1.$2');
-        [...v.querySelectorAll('track')].forEach(x => x.remove());
-        const tr = document.createElement('track'); tr.kind = 'subtitles'; tr.label = f.name.replace(/\.\w+$/, ''); tr.default = true;
-        tr.src = URL.createObjectURL(new Blob([t], { type: 'text/vtt' })); v.append(tr);
-        setTimeout(() => { tr.track.mode = 'showing'; }, 150);
-        q('.np-ccb').style.color = 'var(--ac2)'; toast('Subtitle dimuat'); subIn.value = '';
+        setCues(await f.text(), f.name.replace(/\.\w+$/, ''), true); subIn.value = '';
     };
+    loadSavedSub();
 
     function pickEp(e) { if (!canCtl()) return; cancelNext(); c.pickEp(e); }
     function startNext(n) {
@@ -4627,7 +4811,7 @@ function nmPlayer(root, c) {
         q('.np-nxb').style.display = c.eps().length > 1 ? '' : 'none';
         paintQ(); paintMark(); setMedia();
         if (reset) {
-            cancelNext(); q('.np-err').classList.remove('np-on');
+            cancelNext(); q('.np-err').classList.remove('np-on'); loadSavedSub();
             root.classList.remove('np-started'); root.dataset.playing = '0';
             q('.np-poster').style.backgroundImage = c.poster() ? `url("${c.poster()}")` : '';
         }
@@ -4845,6 +5029,7 @@ ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas
             curEp: () => curEp,
             pickEp: e => { window._sw(e); vv.play().catch(() => { }); },
             quiet: () => !(room && room.host_id !== me.id),
+            guestCmd: o => window._roomReq && window._roomReq(o),
             onBack: () => $('#fback').click(),
             isSaved: () => !!(FS[id] && FS[id].saved),
             toggleSave: () => actSave(id),
@@ -5054,6 +5239,25 @@ function bindRoom(v) {
     ['play', 'pause', 'seeked', 'ratechange'].forEach(e => v.addEventListener(e, push));
     v.addEventListener('ended', () => { if (!suppress) send({ playing: false }); });
     window._roomPush = o => { send(o); };
+    // ---- host lag / buffering: tamu ikut berhenti sampai host lancar lagi ----
+    let wT = null, stalled = false;
+    if (host) {
+        const stall = () => { clearTimeout(wT); wT = setTimeout(() => { if (!v.paused && v.readyState < 3) { stalled = true; send({ playing: false, wait: true }); } }, 500); };
+        const recover = () => { clearTimeout(wT); if (stalled) { stalled = false; send(); } };
+        ['waiting', 'stalled'].forEach(e => v.addEventListener(e, stall));
+        ['playing', 'canplay', 'seeked'].forEach(e => v.addEventListener(e, recover));
+    }
+    // ---- tamu minta play / pause / skip -> diteruskan ke host ----
+    window._roomReq = o => { if (!host && ch && subbed) ch.send({ type: 'broadcast', event: 'req', payload: Object.assign({ id: me.id }, o) }).catch(() => { }); };
+    const onReq = o => {
+        if (!host || !o || !v.isConnected) return;
+        try {
+            if (o.a === 'play') v.play().catch(() => { });
+            else if (o.a === 'pause') v.pause();
+            else if (o.a === 'skip') v.currentTime = Math.max(0, Math.min((v.currentTime || 0) + (+o.d || 0), v.duration || 1e9));
+        } catch (e) { }
+        send(); dbPush();
+    };
     // ---- tamu: ikuti host ----
     const apply = (n, live) => {
         if (host || !n || !v.isConnected) return;
@@ -5101,6 +5305,7 @@ function bindRoom(v) {
     ch = chan = sb.channel('r' + code, { config: { broadcast: { self: false }, presence: { key: String(me.id) } } })
         .on('broadcast', { event: 'sync' }, ({ payload }) => apply(payload, true))
         .on('broadcast', { event: 'hello' }, () => { if (host) { send(); } })
+        .on('broadcast', { event: 'req' }, ({ payload }) => onReq(payload))
         .on('broadcast', { event: 'bye' }, () => kick('Host meninggalkan room, kamu otomatis keluar'))
         .on('presence', { event: 'sync' }, drawOnline)
         .on('presence', { event: 'join', }, ({ newPresences }) => {
@@ -5144,7 +5349,7 @@ function bindRoom(v) {
     initVoice();
     let tick = 0;
     if (host)
-        hb = setInterval(() => { if (!v.isConnected) return clearInterval(hb); if (!v.paused) send(); if (++tick % 11 === 0) dbPush(); }, 4000); // detak 4 detik: tamu yang meleset otomatis disamakan
+        hb = setInterval(() => { if (!v.isConnected) return clearInterval(hb); if (!v.paused) send(stalled ? { playing: false, wait: true } : {}); if (++tick % 11 === 0) dbPush(); }, 4000); // detak 4 detik: tamu yang meleset otomatis disamakan
 }
 
 // ---- suara peer-to-peer (WebRTC mesh, signaling lewat Supabase Realtime) ----
@@ -6602,7 +6807,7 @@ function rwInit(row) {
     if (row.dataset.rw) return;
     row.dataset.rw = '1';
     const w = document.createElement('div');
-    w.className = 'rw';
+    w.className = 'rw' + (row.classList.contains('nfpills') || row.classList.contains('chips') ? ' rw-on' : '');
     row.parentNode.insertBefore(w, row);
     w.appendChild(row);
     const mk = d => {
@@ -6716,11 +6921,28 @@ function lobby() {
 
 // ---- fitur tambahan ----
 async function contRow() {
-    const { data } = await sb.from('history').select('*,titles(*)').eq('user_id', me.id).order('updated_at', { ascending: false }).limit(8);
-    const l = (data || []).filter(h => h.titles && h.progress > 5).map(h => h.titles);
-    if (!l.length || tab !== 'home' || $('#cont')) return;
-    $('#hero')?.insertAdjacentHTML('afterend', `<div id="cont"><h2>${ic('play')} Lanjutkan nonton</h2><div class="row">${l.map(poster).join('')}</div></div>`);
+    const { data } = await sb.from('history').select('*,titles(*)').eq('user_id', me.id).order('updated_at', { ascending: false }).limit(12);
+    if (tab !== 'home' || $('#contwrap')) return;
+    const hs = (data || []).filter(h => h.titles && h.progress > 5);
+    let html = '';
+    if (hs.length) html += `<section class="nfr" id="cont"><h2>${ic('play')} Lanjutkan nonton</h2><div class="row">${hs.slice(0, 8).map(h => poster(h.titles).replace(/<\/div>$/, `<div class="bar nfbar"><i style="width:${Math.min(100, h.progress / 6)}%"></i></div></div>`)).join('')}</div></section>`;
+    // "Karena kamu menonton ..." : judul lain dengan genre yang sama
+    const last = hs[0] && hs[0].titles;
+    if (last && last.genre) {
+        const gs = last.genre.split(',').map(x => x.trim()).filter(Boolean), seen = new Set((data || []).map(h => h.title_id));
+        const l = titles.filter(t => t.id !== last.id && !seen.has(t.id) && (t.genre || '').split(',').some(x => gs.includes(x.trim()))).slice(0, 20);
+        if (l.length) html += `<section class="nfr"><h2>${ic('sparkle')} Karena kamu menonton ${esc(last.title)}</h2><div class="row">${l.map(poster).join('')}</div></section>`;
+    }
+    // Daftar saya (tersimpan)
+    try {
+        const sv = NMLib.saved ? await NMLib.saved() : [];
+        const l = (Array.isArray(sv) ? sv : []).map(x => titles.find(t => t.id == (x && (x.title_id || x.id)))).filter(Boolean);
+        if (l.length) html += `<section class="nfr"><h2>${ic('bookmark')} Daftar saya</h2><div class="row">${l.map(poster).join('')}</div></section>`;
+    } catch (e) { }
+    if (html && tab === 'home' && !$('#contwrap')) $('#hero')?.insertAdjacentHTML('afterend', `<div id="contwrap">${html}</div>`);
 }
+
+function nfGo(g) { go('discover').then(() => { if (g === 'Film' || g === 'Series') { const t = titles.filter(x => (g === 'Series') === (x.type === 'series')); const gr = $('#gr'); if (gr) gr.innerHTML = t.map(poster).join('') || empty('Ga ketemu'); document.querySelectorAll('.chip').forEach(c => c.classList.remove('on')); } else if (g) views.discover('', g); }); }
 
 function randomPick() {
     if (!titles.length) return;
