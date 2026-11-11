@@ -10,7 +10,7 @@
 <link rel="apple-touch-icon" href="img/chick.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700&family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;800&family=Orbitron:wght@500;700&display=swap">
 <style>
 /* =========================================================
    NauMovie · redesign
@@ -1786,12 +1786,14 @@ html:not([data-fx=high]) .bg,html:not([data-fx=high]) .beam,html:not([data-fx=hi
 .poster.frm .frmi{position:absolute;left:0;right:0;top:26%;aspect-ratio:16/9;background:var(--f) center/cover;box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:1}
 .poster.frm .tag,.poster.frm .nwb,.poster.frm .rt,.poster.frm span{z-index:2}
 .rw{position:relative}
-.rw-b{position:absolute;top:calc(50% - 26px);z-index:4;width:40px;height:40px;border-radius:50%;border:1px solid var(--bd);background:var(--bg2);color:var(--tx);display:none;place-items:center;cursor:pointer;opacity:0;transition:opacity .2s,transform .2s;box-shadow:var(--sh);padding:0}
+/* panah carousel: kiri & kanan identik, sejajar di tengah tinggi poster.
+   (class lama .l/.r bentrok dengan huruf judul animasi .l, makanya panah kiri turun ke bawah) */
+.rw-b{position:absolute;top:calc(50% - 4px);transform:translateY(-50%);z-index:4;width:42px;height:42px;margin:0;padding:0;border:0;border-radius:50%;background:var(--bg2);color:var(--tx);display:none;place-items:center;cursor:pointer;opacity:0;transition:opacity .2s,transform .2s,background .2s,color .2s;box-shadow:0 8px 22px rgba(0,0,0,.45)}
 .rw-b svg{width:20px;height:20px}
-.rw-b.l{left:-10px}
-.rw-b.r{right:-10px}
+.rw-b.rw-l{left:-4px}
+.rw-b.rw-r{right:-4px}
 .rw-b[hidden]{display:none!important}
-@media (hover:hover) and (pointer:fine){.rw-b{display:grid}.rw:hover .rw-b,.rw-b:focus-visible{opacity:1}.rw-b:hover{transform:scale(1.1);background:var(--ac);color:#14101f}}
+@media (hover:hover) and (pointer:fine){.rw-b{display:grid}.rw:hover .rw-b,.rw-b:focus-visible{opacity:1}.rw-b:hover{transform:translateY(-50%) scale(1.08);background:var(--ac);color:#14101f}}
 .nwb{position:absolute;top:8px;left:8px;z-index:2;font-style:normal;font:800 .62rem var(--font);letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--ac);color:#14101f;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .tag + .nwb{top:30px}
 .rt{position:absolute;top:8px;right:8px;z-index:2;font-style:normal;font:700 .68rem var(--font);padding:3px 8px;border-radius:99px;background:var(--y);color:#14101f}
@@ -1841,10 +1843,15 @@ html:not([data-fx=high]) .bg,html:not([data-fx=high]) .beam,html:not([data-fx=hi
 (function () {
   var d = document.documentElement, ls = localStorage, nv = navigator;
   var t = ls.nm_theme;
-  d.dataset.theme = ['noir','matcha','lemon','lilac','peach'].indexOf(t) > -1 ? t : 'deep';
+  d.dataset.theme = ['noir','matcha','lemon','lilac','peach','ocean','cyber'].indexOf(t) > -1 ? t : 'deep';
   var low = (nv.deviceMemory && nv.deviceMemory <= 4) || (nv.hardwareConcurrency && nv.hardwareConcurrency <= 4) || (nv.connection && nv.connection.saveData);
   var coarse = matchMedia('(pointer: coarse)').matches;
   var q = ls.nm_perf;
+  /* KUNCI GLOBAL ULTRA: true = Ultra terkunci untuk semua pengguna, false = terbuka */
+  window.NM_ULTRA_LOCKED = true;
+  var ul = q === 'ultra';
+  if (ul && window.NM_ULTRA_LOCKED) { ul = false; q = 'high'; ls.nm_perf = 'high'; }
+  if (ul) { q = 'high'; d.dataset.ultra = '1'; }
   if (q !== 'low' && q !== 'medium' && q !== 'high') {
     q = ls.nm_fx === '0' || low ? 'low' : (coarse || (nv.hardwareConcurrency && nv.hardwareConcurrency < 8)) ? 'medium' : 'high';
   }
@@ -2433,6 +2440,79 @@ html[data-fx=low] #nt,html[data-fx=low] #nt .nc{animation:none}
 .pnum button.done:not(.on){color:var(--ac2);border-color:var(--ac2)}
 @media(prefers-reduced-motion:reduce){.dt-bar i,.dt-fold .ic{transition:none}}
 </style>
+<style id="flat-ui">
+/* =========================================================
+   NauMovie · FLAT UI (tanpa border)
+   Permukaan dibedakan lewat warna tonal + bayangan lembut.
+   Tiap tema punya karakter sendiri lewat bentuk, bayangan,
+   gerak, dan font, bukan lewat garis.
+   ========================================================= */
+:root{--f1:rgba(255,255,255,.07);--f2:rgba(255,255,255,.12)}
+
+html[data-theme=deep]{--r:24px;--rs:16px;--pill:999px;--bw:0px;--bs:solid;--bd:transparent;
+  --sh:0 14px 34px rgba(8,1,5,.45);--shh:0 20px 44px rgba(8,1,5,.55),0 0 30px rgba(var(--glow),.25);--bsh:0 6px 16px rgba(var(--glow),.28);
+  --hov:translateY(-6px) scale(1.03);--bhov:translateY(-2px);--enter:fade}
+html[data-theme=noir]{--r:12px;--rs:8px;--pill:10px;--bw:0px;--bs:solid;--bd:transparent;
+  --sh:0 10px 26px rgba(0,0,0,.6),0 0 22px rgba(var(--glow),.16);--shh:0 0 36px rgba(var(--glow),.55);--bsh:0 0 16px rgba(var(--glow),.45);
+  --hov:translateY(-5px);--bhov:translateY(-2px);--enter:snap}
+html[data-theme=matcha]{--r:34px;--rs:22px;--pill:999px;--bw:0px;--bs:solid;--bd:transparent;
+  --sh:0 10px 26px rgba(0,0,0,.28);--shh:0 16px 34px rgba(0,0,0,.36),0 0 26px rgba(var(--glow),.22);--bsh:none;
+  --hov:translateY(-4px);--bhov:translateY(-2px);--enter:grow}
+html[data-theme=lemon]{--r:20px;--rs:14px;--pill:16px;--bw:0px;--bs:solid;--bd:transparent;
+  --sh:0 10px 24px rgba(0,0,0,.35);--shh:0 16px 30px rgba(0,0,0,.4),0 0 26px rgba(var(--glow),.3);--bsh:0 6px 14px rgba(var(--glow),.35);
+  --hov:rotate(-2deg) scale(1.05);--bhov:translateY(-3px) rotate(-1deg);--enter:bounce}
+html[data-theme=lilac]{--r:28px;--rs:18px;--pill:999px;--bw:0px;--bs:solid;--bd:transparent;
+  --sh:0 12px 34px rgba(10,5,30,.5),0 0 40px rgba(var(--glow),.12);--shh:0 18px 44px rgba(10,5,30,.55),0 0 44px rgba(var(--glow),.3);--bsh:none;
+  --hov:translateY(-8px);--bhov:translateY(-3px);--enter:drift}
+html[data-theme=peach]{--r:12px;--rs:8px;--pill:10px;--bw:0px;--bs:solid;--bd:transparent;
+  --sh:0 8px 20px rgba(0,0,0,.35);--shh:0 14px 28px rgba(0,0,0,.42);--bsh:0 4px 10px rgba(0,0,0,.3);
+  --hov:rotate(1.2deg) translateY(-4px);--bhov:translateY(-2px) rotate(.5deg);--enter:slide}
+
+/* semua garis tepi dibuat transparan (kecuali pemutar video & segitiga balon, yang memang pakai border sebagai bentuk) */
+html :not(.nmp):not(.nmp *){border-color:transparent!important}
+
+/* ---- header & tab bar: kaca bersih tanpa garis kilap di tepi ---- */
+html[data-fx=medium] .top.glass,html[data-fx=medium] .tabs.glass,
+html[data-fx=high] .top.glass,html[data-fx=high] .tabs.glass{box-shadow:0 12px 32px rgba(8,1,5,.4)}
+html[data-fx=high] .top.glass::before,html[data-fx=high] .tabs.glass::before{display:none}
+html[data-fx=medium] .tabs .ind,html[data-fx=high] .tabs .ind{box-shadow:none;background:rgba(255,255,255,.14)}
+.top.glass,.tabs.glass{box-shadow:0 12px 32px rgba(8,1,5,.35)}
+.fbar{box-shadow:0 6px 18px rgba(0,0,0,.25)}
+
+/* ---- permukaan: pengganti garis ---- */
+.btn.ghost,.chip,.sh,.dt-sq,.dt-pillb,.pchips span,.pseas button,.dt-seas button,.ptabs,.pl,.cc-r button,.avopt{background:var(--f1)}
+.pcard,.dt-card,.dt-ep,.dt-search,.dt-empty,.implist,.rqi,.cc-b,.panel{background:rgba(255,255,255,.06)}
+.chip.on,.btn.ghost.on{background:rgba(var(--glow),.24)}
+input,select,textarea{background:rgba(255,255,255,.08)}
+input:focus,textarea:focus,select:focus{background:rgba(255,255,255,.12);box-shadow:0 0 0 3px rgba(var(--glow),.35)}
+.cmp input:focus{box-shadow:none;background:transparent}
+.sheet,.modal .sheet{box-shadow:0 -10px 40px rgba(0,0,0,.45)}
+
+/* ---- status terpilih: pakai warna latar, bukan garis ---- */
+.item.on,.dt-ep.cur,.avopt.on,.plr.on,.act.on,.rqi.sel{background:rgba(var(--glow),.22)}
+.plr .ck{background:var(--f2)}
+.dt-ep.cur,.avopt.on{box-shadow:0 0 22px rgba(var(--glow),.35)}
+
+/* ---- tombol panah carousel ikut bersih ---- */
+.rw-b{border:0;box-shadow:0 8px 22px rgba(0,0,0,.45)}
+
+/* ---- tema peach: tetap retro (serif) tapi tanpa garis putus-putus ---- */
+html[data-theme=peach] .fcta{background:rgba(255,138,92,.12)}
+html[data-theme=lemon] .btn{box-shadow:var(--bsh)}
+</style>
+<style id="nm-extra">
+/* ==== tema baru + teks berjalan + efek (flat, tanpa gradient) ==== */
+html[data-theme=ocean]{--bg:#061620;--bg2:#0c2a3a;--ac:#3fc8e6;--ac2:#a6ecf8;--glow:63,200,230;--tx:#eefcff;--mut:#9cc7d3;--pk:#5fd6ee;--pk2:#b9f2fb;--bl:#1d8fb0;--bl2:#0f5f7a;--btn:var(--ac);--r:30px;--rs:20px;--pill:999px;--bw:0px;--bs:solid;--bd:transparent;--sh:0 10px 26px rgba(0,8,14,.45);--shh:0 16px 34px rgba(0,8,14,.55),0 0 30px rgba(var(--glow),.28);--bsh:none;--hov:translateY(-6px);--bhov:translateY(-2px);--enter:drift;--font:"Fredoka","Nunito",ui-rounded,system-ui,sans-serif;--body:"Nunito",ui-rounded,system-ui,sans-serif}
+html[data-theme=cyber]{--bg:#070612;--bg2:#15102e;--ac:#ff2bd6;--ac2:#7ff5ff;--glow:255,43,214;--tx:#f4f0ff;--mut:#a89bd6;--pk:#ff4fe0;--pk2:#9ef7ff;--bl:#18e0f0;--bl2:#7a2bff;--btn:var(--ac);--r:3px;--rs:2px;--pill:3px;--bw:0px;--bs:solid;--bd:transparent;--sh:4px 4px 0 rgba(24,224,240,.55);--shh:7px 7px 0 rgba(24,224,240,.85);--bsh:3px 3px 0 rgba(127,245,255,.6);--hov:translate(-4px,-4px);--bhov:translate(-2px,-2px);--enter:snap;--font:"Orbitron","Nunito",system-ui,sans-serif;--body:"Nunito",system-ui,sans-serif}
+html[data-fx=high] .btn:active,html[data-fx=high] .tab:active,html[data-fx=high] .chip:active{transform:scale(.92)}
+html[data-theme=cyber][data-fx=high] .ttl-t{text-shadow:2px 0 #18e0f0,-2px 0 #ff2bd6;animation:nmglitch 3.4s steps(1) infinite}
+@keyframes nmglitch{0%,92%,100%{text-shadow:2px 0 #18e0f0,-2px 0 #ff2bd6;transform:none}93%{text-shadow:-4px 0 #18e0f0,4px 0 #ff2bd6;transform:translateX(2px)}95%{text-shadow:4px 0 #ff2bd6,-4px 0 #18e0f0;transform:translateX(-2px)}97%{text-shadow:2px 0 #18e0f0,-2px 0 #ff2bd6;transform:none}}
+html[data-theme=cyber] .btn,html[data-theme=cyber] .tab,html[data-theme=cyber] h1,html[data-theme=cyber] h2,html[data-theme=cyber] h3{text-transform:uppercase;letter-spacing:.06em}
+html[data-theme=ocean][data-fx=high] .btn:hover{animation:nmwave .9s ease-in-out}
+@keyframes nmwave{0%,100%{transform:rotate(0)}25%{transform:translateY(-3px) rotate(-2deg)}75%{transform:translateY(-1px) rotate(2deg)}}
+.vchip.talk{outline:2px solid var(--ac);outline-offset:2px}
+</style>
+
 </head>
 <body>
 <canvas id="fx"></canvas>
@@ -2481,7 +2561,9 @@ html[data-fx=low] #nt,html[data-fx=low] #nt .nc{animation:none}
         matcha: { t: ['petal', 'petal', 'petal', 'mote'], d: 1, v: .7, st: 0, tr: 0, b: ['petal', 'petal'], p: ['--ac', '--ac2', '--ac', '--ac2', '#ffffff'] },
         lemon:  { t: ['dot', 'mote', 'mote', 'spark', 'mote'], d: 1, v: 1.3, st: 0, tr: 1, b: ['dot', 'mote', 'spark'], p: ['--y', '--pk', '--bl', '--g', '--pu'] },
         lilac:  { t: ['spark', 'spark', 'dot', 'heart'], d: -1, v: .5, st: 1, tr: 0, b: ['spark', 'heart'], p: ['--ac', '--ac2', '--pk', '--ac2', '#ffffff'] },
-        peach:  { t: ['mote', 'mote', 'dot', 'petal'], d: -1, v: 1, st: 0, tr: 1, b: ['mote', 'spark'], p: ['--ac', '--ac2', '--y', '--pk', '#ffffff'] }
+        peach:  { t: ['mote', 'mote', 'dot', 'petal'], d: -1, v: 1, st: 0, tr: 1, b: ['mote', 'spark'], p: ['--ac', '--ac2', '--y', '--pk', '#ffffff'] },
+        ocean:  { t: ['dot', 'dot', 'mote', 'dot'], d: -1, v: .6, st: 0, tr: 1, b: ['dot', 'mote', 'dot'], p: ['--ac', '--ac2', '--pk', '#ffffff', '--ac2'] },
+        cyber:  { t: ['spark', 'spark', 'mote', 'dot'], d: 1, v: 1.9, st: 1, tr: 1, b: ['spark', 'spark', 'mote'], p: ['--ac', '--ac2', '--pk', '--bl', '#ffffff'] }
     };
     const cfg = () => CFG[document.documentElement.dataset.theme] || CFG.deep;
 
@@ -2700,17 +2782,6 @@ html[data-fx=low] #nt,html[data-fx=low] #nt .nc{animation:none}
         if (!sq) { sq = true; requestAnimationFrame(moveSpot); }
         const n = performance.now();
         if (cfg().tr && lv() === 'high' && n - lastTrail > 38) { lastTrail = n; trail(mx, my); }
-
-        // tilt poster
-        const p = e.target.closest && e.target.closest('.poster');
-        if (p) {
-            const r = p.getBoundingClientRect();
-            const px = (e.clientX - r.left) / r.width, py = (e.clientY - r.top) / r.height;
-            p.style.setProperty('--rx', ((.5 - py) * 14).toFixed(1) + 'deg');
-            p.style.setProperty('--ry', ((px - .5) * 14).toFixed(1) + 'deg');
-            p.style.setProperty('--px', (px * 100).toFixed(0) + '%');
-            p.style.setProperty('--py', (py * 100).toFixed(0) + '%');
-        }
     }, { passive: true });
 
     addEventListener('pointerout', e => {
@@ -2740,8 +2811,12 @@ html[data-fx=low] #nt,html[data-fx=low] #nt .nc{animation:none}
 
     window.setFxLevel = q => {
         const h = document.documentElement;
-        if (q !== 'low' && q !== 'medium' && q !== 'high') q = 'medium';
-        localStorage.nm_perf = q;
+        if (q !== 'low' && q !== 'medium' && q !== 'high' && q !== 'ultra') q = 'medium';
+        if (q === 'ultra' && window.NM_ULTRA_LOCKED) { if (typeof toast === 'function') toast('Ultra sedang dikunci'); return; }
+        const U = q === 'ultra', shown = q;
+        if (U) q = 'high';
+        localStorage.nm_perf = shown;
+        if (U) h.dataset.ultra = '1'; else delete h.dataset.ultra;
         h.dataset.fx = q;
         h.classList.toggle('lite', q === 'low');
         h.classList.toggle('nofx', q === 'low' || reduce);
@@ -2749,11 +2824,11 @@ html[data-fx=low] #nt,html[data-fx=low] #nt .nc{animation:none}
         parts.length = 0;
         size();
         if (!on) { cx.clearRect(0, 0, W, H); c2.clearRect(0, 0, W, H); bits.length = 0; }
-        document.querySelectorAll('.fxq').forEach(b => b.classList.toggle('on', b.dataset.q === q));
+        document.querySelectorAll('.fxq').forEach(b => b.classList.toggle('on', b.dataset.q === shown));
     };
 
     window.toggleFx = () => {
-        const o = ['low', 'medium', 'high'], q = o[(o.indexOf(lv()) + 1) % 3];
+        const o = window.NM_ULTRA_LOCKED ? ['low', 'medium', 'high'] : ['low', 'medium', 'high', 'ultra'], cu = document.documentElement.dataset.ultra ? 'ultra' : lv(), q = o[(o.indexOf(cu) + 1) % o.length];
         setFxLevel(q);
         if (typeof toast === 'function') toast('Efek ' + q);
     };
@@ -2902,9 +2977,11 @@ const THEMES = {
     matcha: ['Matcha', '#6fcf6a', 'Taman tenang: sangat membulat, kelopak jatuh pelan, bunyi gelembung.'],
     lemon: ['Lemon', '#ffd23f', 'Stiker ceria: garis tebal, tombol timbul, konfeti, bunyi marimba.'],
     lilac: ['Lilac', '#a98bff', 'Mimpi lembut: cincin halus, kerlip pelan, bunyi lonceng.'],
-    peach: ['Persik', '#ff8a5c', 'Tiket retro: garis putus-putus, huruf serif, bara naik, bunyi marimba.']
+    peach: ['Persik', '#ff8a5c', 'Tiket retro: garis putus-putus, huruf serif, bara naik, bunyi marimba.'],
+    ocean: ['Samudra', '#3fc8e6', 'Dasar laut: gelembung naik, gerak melayang, teks berjalan ombak, bunyi ombak.'],
+    cyber: ['Cyber neon', '#ff2bd6', 'Kota neon: sudut tajam, judul glitch, hujan piksel, teks berjalan, bunyi synth.']
 };
-const THEME_PACK = { deep: 'kristal', noir: 'arcade', matcha: 'gelembung', lemon: 'marimba', lilac: 'lonceng', peach: 'marimba' };
+const THEME_PACK = { deep: 'kristal', noir: 'arcade', matcha: 'gelembung', lemon: 'marimba', lilac: 'lonceng', peach: 'marimba', ocean: 'ombak', cyber: 'synth' };
 
 let lastPt = [innerWidth / 2, innerHeight / 2];
 addEventListener('pointerdown', e => { lastPt = [e.clientX, e.clientY]; }, { capture: true, passive: true });
@@ -2977,6 +3054,8 @@ const PACKS = {
     gelembung: ['Gelembung', 'sine', [440, 520, 600], [330, 495, 740]],
     arcade: ['Arcade', 'square', [988, 1175], [523, 784, 1047]],
     lonceng: ['Lonceng', 'sine', [1568, 2093], [880, 1319, 1760]],
+    ombak: ['Ombak', 'sine', [392, 494, 587], [294, 392, 494]],
+    synth: ['Synth', 'sawtooth', [659, 880, 1319], [330, 494, 659]],
     senyap: ['Senyap', 'sine', [], []]
 };
 const pack = () => PACKS[localStorage.nm_pack] || PACKS[THEME_PACK[document.documentElement.dataset.theme]] || PACKS.kristal;
@@ -3734,7 +3813,7 @@ const rtBadge = id => ratings[id] ? `<em class="rt">★ ${ratings[id].avg}</em>`
 const isNewTitle = t => { const d = Date.parse(t.created_at); return !isNaN(d) && Date.now() - d < 7 * 864e5 && d < Date.now() + 864e5; };
 
 const isFrame = u => /#frame$/.test(u || '');
-const poster = t => `<div class="poster${isFrame(t.thumbnail_url) ? ' frm' : ''}" data-id="${t.id}" ${isFrame(t.thumbnail_url) ? `style="--f:url('${esc(String(t.thumbnail_url).replace(/#frame$/, ''))}')"` : bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${isFrame(t.thumbnail_url) ? '<i class="frmi"></i>' : ''}${t.type === 'series' ? '<em class="tag">Series</em>' : ''}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
+const poster = t => `<div class="poster${isFrame(t.thumbnail_url) ? ' frm' : ''}" data-id="${t.id}" ${isFrame(t.thumbnail_url) ? `style="--f:url('${esc(String(t.thumbnail_url).replace(/#frame$/, ''))}')"` : bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${isFrame(t.thumbnail_url) ? '<i class="frmi"></i>' : ''}${(t.cutout_url || t.character_url) ? `<img class="cut" alt="" loading="lazy" decoding="async" src="${esc(t.cutout_url || t.character_url)}">` : ''}${t.type === 'series' ? '<em class="tag">Series</em>' : ''}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
 
 const empty = m => `<div class="empty"><img class="eimg" src="img/chick.png" alt="">${m}</div>`;
 
@@ -3821,7 +3900,7 @@ const views = {
         $('#v').innerHTML = `<h2>${ic('sliders')} Lainnya</h2>
 <div class="glass pad set"><h3>Tampilan</h3><p class="hint">${esc((THEMES[document.documentElement.dataset.theme] || THEMES.deep)[2])}</p>
 ${row('Tema', 'Warna, bentuk, efek, dan bunyi ikut berubah', `<span class="swatches">${Object.entries(THEMES).map(([k, v]) => `<button class="swatch ${document.documentElement.dataset.theme === k ? 'on' : ''}" style="--s:${v[1]}" aria-label="${v[0]}" onclick="Promise.resolve(setTheme('${k}')).then(()=>views.more())"></button>`).join('')}</span>`)}
-${row('Kualitas efek', 'Low hemat baterai, Medium seimbang, High efek penuh', `<span class="packs">${[['low', 'Low'], ['medium', 'Medium'], ['high', 'High']].map(([k, n]) => `<button class="chip fxq ${document.documentElement.dataset.fx === k ? 'on' : ''}" data-q="${k}" onclick="setFxLevel('${k}')">${n}</button>`).join('')}</span>`)}
+${row('Kualitas efek', 'Low hemat baterai, Medium seimbang, High efek penuh + hover 3D poster, Ultra + karakter 3D terpisah dari latar (paling berat)', `<span class="packs">${[['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['ultra', 'Ultra']].map(([k, n]) => `<button class="chip fxq ${(document.documentElement.dataset.ultra ? 'ultra' : document.documentElement.dataset.fx) === k ? 'on' : ''}" data-q="${k}" ${k === 'ultra' && window.NM_ULTRA_LOCKED ? 'aria-disabled="true" style="opacity:.55"' : ''} onclick="setFxLevel('${k}')">${k === 'ultra' && window.NM_ULTRA_LOCKED ? '🔒 ' : ''}${n}</button>`).join('')}</span>`)}
 ${row('Intro logo', 'Animasi anak ayam saat buka bioskop', sw('s_in', localStorage.nm_intro !== '0', 'togglePref(\'nm_intro\',this)'))}
 ${row('Putar ulang intro', 'Lihat animasinya lagi', `<button class="btn sm ghost" onclick="playIntro(true)">${ic('play')}</button>`)}</div>
 <div class="glass pad set"><h3>Suara</h3>
@@ -3898,6 +3977,9 @@ const loadHls = () => window.Hls ? Promise.resolve() : (hlsP = hlsP || new Promi
 function loadSrc(v, url, at) {
     if (hlsI) { hlsI.destroy(); hlsI = null; }
     v._u = url;
+    const yp = ytParse(url);
+    if (yp) { try { v.removeAttribute('src'); v.load(); } catch (e) { } return ytAttach(v, yp, at); }
+    if (v._yt) ytDetach(v);
     const isHls = /\.m3u8(\?|#|$)/i.test(url || '');
     if (isHls && !v.canPlayType('application/vnd.apple.mpegurl')) {
         loadHls().then(() => {
@@ -3956,19 +4038,119 @@ function loadSrc(v, url, at) {
     }
 }
 
+
+// ======================================================================
+// PEMUTAR YOUTUBE: YouTube IFrame API dibungkus supaya berperilaku seperti elemen <video>.
+// Seluruh kontrol NMP (play, seek, kecepatan, volume, progres, riwayat, nobar) tetap jalan tanpa diubah.
+// ======================================================================
+let ytApiP = null;
+const loadYtApi = () => ytApiP || (ytApiP = new Promise((ok, no) => {
+    if (window.YT && YT.Player) return ok();
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => { try { prev && prev(); } catch (e) { } ok(); };
+    const sc = document.createElement('script');
+    sc.src = 'https://www.youtube.com/iframe_api';
+    sc.onerror = () => { ytApiP = null; sc.remove(); no(new Error('yt')); };
+    document.head.appendChild(sc);
+    setTimeout(() => { if (!(window.YT && YT.Player)) { ytApiP = null; no(new Error('yt timeout')); } }, 15000);
+}));
+const YT_PROPS = ['currentTime', 'duration', 'paused', 'ended', 'seeking', 'readyState', 'volume', 'muted', 'playbackRate', 'buffered', 'error', 'play', 'pause', 'load', 'videoWidth'];
+
+function ytDetach(v) {
+    const y = v._yt; if (!y) return;
+    clearInterval(y.tm);
+    try { y.pl && y.pl.destroy(); } catch (e) { }
+    if (y.host && y.host.isConnected) y.host.remove();
+    YT_PROPS.forEach(k => { try { delete v[k]; } catch (e) { } });
+    v.style.visibility = '';
+    v._yt = null;
+}
+
+function ytAttach(v, p, at) {
+    ytDetach(v);
+    const url = v._u, host = document.createElement('div');
+    host.className = 'np-yt';
+    host.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;background:#000;pointer-events:none;overflow:hidden';
+    const inner = document.createElement('div'); host.appendChild(inner);
+    v.parentNode.insertBefore(host, v.nextSibling);
+    v.style.visibility = 'hidden';
+    const y = v._yt = { pl: null, host, ready: false, st: -1, want: false, pend: null, vol: 1, mute: false, rate: 1, dur: NaN, t: 0, lastT: -1, seeking: false, err: 0 };
+    const fire = (n) => { try { v.dispatchEvent(new Event(n)); } catch (e) { } };
+    const live = () => v._yt === y && v._u === url && v.isConnected;
+    const def = (k, o) => Object.defineProperty(v, k, Object.assign({ configurable: true }, o));
+    def('currentTime', {
+        get: () => { if (y.pend != null) return y.pend; try { return y.ready ? y.pl.getCurrentTime() || 0 : 0; } catch (e) { return y.t; } },
+        set: t => { t = Math.max(0, +t || 0); if (!y.ready) { y.pend = t; return; } y.seeking = true; fire('seeking'); try { y.pl.seekTo(t, true); } catch (e) { } y.t = t; setTimeout(() => { y.seeking = false; fire('seeked'); fire('timeupdate'); }, 250); }
+    });
+    def('duration', { get: () => { try { const d = y.ready ? y.pl.getDuration() : 0; return d > 0 ? d : (y.dur || NaN); } catch (e) { return NaN; } } });
+    def('paused', { get: () => !(y.st === 1 || (y.st === 3 && y.want)) });
+    def('ended', { get: () => y.st === 0 });
+    def('seeking', { get: () => y.seeking });
+    def('readyState', { get: () => y.ready ? 4 : 0 });
+    def('videoWidth', { get: () => 0 });
+    def('error', { get: () => y.err ? { code: 4, message: 'youtube ' + y.err } : null });
+    def('buffered', { get: () => { let f = 0; try { f = y.ready ? (y.pl.getVideoLoadedFraction() || 0) * (y.pl.getDuration() || 0) : 0; } catch (e) { } return { length: f > 0 ? 1 : 0, start: () => 0, end: () => f }; } });
+    def('volume', { get: () => y.vol, set: x => { y.vol = Math.min(1, Math.max(0, +x || 0)); try { y.ready && y.pl.setVolume(y.vol * 100); } catch (e) { } fire('volumechange'); } });
+    def('muted', { get: () => y.mute, set: m => { y.mute = !!m; try { if (y.ready) y.mute ? y.pl.mute() : y.pl.unMute(); } catch (e) { } fire('volumechange'); } });
+    def('playbackRate', { get: () => y.rate, set: r => { y.rate = +r || 1; try { y.ready && y.pl.setPlaybackRate(y.rate); } catch (e) { } fire('ratechange'); } });
+    def('play', { value: () => { y.want = true; try { y.ready && y.pl.playVideo(); } catch (e) { } return Promise.resolve(); } });
+    def('pause', { value: () => { y.want = false; try { y.ready && y.pl.pauseVideo(); } catch (e) { } } });
+    def('load', { value: () => { } });
+    const startAt = Math.floor(at > 0 ? at : (p.start || 0));
+    loadYtApi().then(() => {
+        if (!live()) return;
+        const vars = { controls: 0, disablekb: 1, fs: 0, rel: 0, modestbranding: 1, playsinline: 1, iv_load_policy: 3, cc_load_policy: 0, origin: location.origin, enablejsapi: 1, start: startAt };
+        const cfg = { width: '100%', height: '100%', playerVars: vars, events: {} };
+        if (p.id) { cfg.videoId = p.id; if (p.list) vars.list = p.list; } else { vars.listType = 'playlist'; vars.list = p.list; }
+        cfg.events.onReady = () => {
+            if (!live()) return;
+            y.ready = true;
+            const f = y.pl.getIframe(); if (f) { f.style.cssText = 'width:100%;height:100%;border:0;pointer-events:none'; f.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture'); }
+            try { y.pl.setVolume(y.vol * 100); y.mute && y.pl.mute(); y.rate !== 1 && y.pl.setPlaybackRate(y.rate); } catch (e) { }
+            fire('loadedmetadata'); fire('durationchange'); fire('canplay');
+            if (y.pend != null) { const t = y.pend; y.pend = null; v.currentTime = t; }
+            if (y.want) { try { y.pl.playVideo(); } catch (e) { } }
+        };
+        cfg.events.onStateChange = e => {
+            if (!live()) return;
+            const s = e.data, prev = y.st; y.st = s;
+            if (s === 1) { fire('canplay'); fire('play'); fire('playing'); fire('durationchange'); }
+            else if (s === 2) fire('pause');
+            else if (s === 3) fire('waiting');
+            else if (s === 0) { y.want = false; fire('pause'); fire('timeupdate'); fire('ended'); }
+            else if (s === 5 && prev !== 5) fire('canplay');
+        };
+        cfg.events.onError = e => {
+            if (!live()) return;
+            y.err = e.data || 1;
+            const m = { 2: 'link YouTube tidak valid', 5: 'video YouTube tidak bisa diputar di pemutar HTML5', 100: 'video YouTube sudah dihapus atau privat', 101: 'pemilik video melarang diputar di situs lain', 150: 'pemilik video melarang diputar di situs lain' }[y.err] || 'video YouTube gagal dimuat';
+            toast('Gagal memutar: ' + m);
+            fire('error');
+        };
+        y.pl = new YT.Player(inner, cfg);
+    }).catch(() => { if (live()) { y.err = 1; toast('Pemutar YouTube gagal dimuat, cek koneksi'); fire('error'); } });
+    // YouTube tidak punya event waktu: jalankan timeupdate sendiri
+    y.tm = setInterval(() => {
+        if (!live()) { if (v._yt === y && !v.isConnected) ytDetach(v); return; }
+        if (!y.ready || v.paused) return;
+        let t = 0; try { t = y.pl.getCurrentTime() || 0; } catch (e) { }
+        if (Math.abs(t - y.lastT) > .01) { y.lastT = t; fire('timeupdate'); }
+    }, 250);
+}
+
 // pengawas macet: lompati celah buffer, pulihkan, lalu muat ulang di posisi yang sama
 function watchdog(v) {
     clearInterval(wd);
     let last = -1, n = 0, reloads = [];
     addEventListener('online', () => {
-        if (!v.isConnected || v._closed || v.paused || v.readyState >= 3) return;
+        if (!v.isConnected || v._closed || v._yt || v.paused || v.readyState >= 3) return;
         const at = v.currentTime, u = v._u;
         loadSrc(v, u, at);
         v.addEventListener('loadedmetadata', () => v.play().catch(() => { }), { once: true });
     });
     wd = setInterval(() => {
         if (!v.isConnected) return clearInterval(wd);
-        if (v.paused || v.ended || v.seeking || document.hidden || Math.abs(v.currentTime - last) > .05) { n = 0; last = v.currentTime; return; }
+        if (v._yt || v.paused || v.ended || v.seeking || document.hidden || Math.abs(v.currentTime - last) > .05) { n = 0; last = v.currentTime; return; }
         n++;
         if (n === 1) {
             const b = v.buffered;
@@ -4208,6 +4390,7 @@ function nmPlayer(root, c) {
                 else v.webkitSetPresentationMode('inline');
                 return;
             }
+            if (v._yt) return toast('PiP belum tersedia untuk video YouTube');
             if (v.readyState < 1) return toast('Video belum siap, tunggu sebentar');
             if (document.pictureInPictureEnabled && v.requestPictureInPicture) await v.requestPictureInPicture();
             else if (v.webkitSupportsPresentationMode && v.webkitSupportsPresentationMode('picture-in-picture')) v.webkitSetPresentationMode('picture-in-picture');
@@ -4217,6 +4400,7 @@ function nmPlayer(root, c) {
     const cast = () => { if (v.remote && v.remote.prompt) v.remote.prompt().catch(() => toast('Tidak ada perangkat cast')); else toast('Cast tidak didukung browser ini'); };
 
     function shot() {
+        if (v._yt) return toast('Screenshot tidak tersedia untuk video YouTube');
         try {
             const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight;
             if (!cv.width) return toast('Video belum siap');
@@ -4232,7 +4416,7 @@ function nmPlayer(root, c) {
     }
 
     // ---------- sheet: kualitas, episode, kecepatan, timer tidur, pengaturan, subtitle ----------
-    const qualitySheet = () => srcs().length < 2 ? toast('Hanya ada satu kualitas untuk video ini') : openSheet('Kualitas', srcs().map(s => ({ l: String(s.res).toUpperCase(), on: s.url === c.curUrl(), fn: () => { if (s.url !== c.curUrl()) { c.setRes(s); } } })));
+    const qualitySheet = () => !canCtl() ? 0 : srcs().length < 2 ? toast('Hanya ada satu kualitas untuk video ini') : openSheet('Kualitas', srcs().map(s => ({ l: String(s.res).toUpperCase(), on: s.url === c.curUrl(), fn: () => { if (s.url !== c.curUrl()) { c.setRes(s); } } })));
     const episodesSheet = () => {
         const l = c.eps(), ep = c.curEp();
         openSheet('Episode', l.map(e => ({ l: `Ep ${e.number}${e.name ? ' · ' + e.name : ''}`, s: l.some(x => x.season !== l[0].season) ? 'S' + e.season : '', on: ep && e.id == ep.id, fn: () => pickEp(e) })));
@@ -4586,9 +4770,9 @@ ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas
         const drawRes = () => {
             const box = $('#resrow'), it = curEp || t;
             if (!box) return;
-            const s = (Array.isArray(it.sources) ? [...it.sources] : []).filter(x => resNum(x.res)).sort((a, b) => resNum(a.res) - resNum(b.res));
+            const s = (Array.isArray(it.sources) ? [...it.sources] : []).filter(x => resNum(x.res) || isYt(x.url)).sort((a, b) => srcRank(a) - srcRank(b));
             box.innerHTML = s.length > 1 ? `<small>Kualitas</small>${s.map(x => `<button class="chip ${x.url === curUrl ? 'on' : ''}" data-u="${esc(x.url)}" data-r="${resNum(x.res)}">${esc(x.res)}</button>`).join('')}` : '';
-            box.querySelectorAll('.chip').forEach(b => b.onclick = () => setRes(b.dataset.u, b.dataset.r));
+            box.querySelectorAll('.chip').forEach(b => b.onclick = () => { if (room && room.host_id !== me.id) return toast('Hanya host yang mengatur pemutaran'); setRes(b.dataset.u, b.dataset.r); });
         };
         drawRes();
         // ---- antarmuka bawah (portrait): kartu episode, sinopsis, daftar episode, progres ----
@@ -4645,7 +4829,7 @@ ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas
             v: vv,
             title: () => t.title,
             poster: () => (curEp && curEp.thumbnail_url) || t.thumbnail_url || '',
-            srcs: () => { const it = curEp || t; return (Array.isArray(it.sources) ? [...it.sources] : []).filter(x => x && x.url && resNum(x.res)).sort((a, b) => resNum(a.res) - resNum(b.res)); },
+            srcs: () => { const it = curEp || t; return (Array.isArray(it.sources) ? [...it.sources] : []).filter(x => x && x.url && (resNum(x.res) || isYt(x.url))).sort((a, b) => srcRank(a) - srcRank(b)); },
             curUrl: () => curUrl,
             setRes: x => setRes(x.url, resNum(x.res)),
             eps: () => epList,
@@ -4658,7 +4842,7 @@ ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas
             reload: at => { loadSrc(vv, curUrl, at); vv.play().catch(() => { }); }
         });
         filmState(id).then(() => np && np.paintMark()).catch(() => { });
-        vv.addEventListener('error', () => vv._closed || toast('Video gagal dimuat. Cek link CDN: harus HTTPS, format mp4 (H.264) atau m3u8'));
+        vv.addEventListener('error', () => vv._closed || vv._yt || toast('Video gagal dimuat. Cek link CDN: harus HTTPS, format mp4 (H.264) atau m3u8'));
         saveFn = () => dtSaveAll(id, curEp, vv);
         {
             const at = dtResumeAt(id, curEp, hist);
@@ -4879,7 +5063,8 @@ function bindRoom(v) {
 }
 
 // ---- suara peer-to-peer (WebRTC mesh, signaling lewat Supabase Realtime) ----
-const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }] };
+const ICE = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' }], iceCandidatePoolSize: 4 };
+addEventListener('pointerdown', () => { if (vc) Object.values(vc.peers).forEach(p => p.el && p.el.paused && p.el.play().catch(() => { })); }, { passive: true });
 
 const voiceUI = () => `<div class="voice"><div class="vtop"><b>${ic('headset')} Obrolan suara</b><span id="vst">Mati</span></div><div class="vlist" id="vlist"></div><div class="vbtns"><button class="btn sm" id="vjoin">${ic('mic')} Gabung suara</button><button class="btn sm ghost" id="vmute" hidden>${ic('micoff')} Mute</button><button class="btn sm ghost" id="vdeaf" hidden>${ic('headset')} Deafen</button></div><p class="hint" id="vhint2" hidden>Ketuk nama teman untuk membisukan dia (hanya di telingamu).</p></div>`;
 
@@ -4938,7 +5123,18 @@ async function joinVoice() {
     }
     const ch = sb.channel('vc' + room.code, { config: { broadcast: { self: false } } });
     vc = { stream, ch, peers: {}, names: {}, muted: false, deaf: false, loc: {} };
-    vc.send = (type, to, data) => ch.send({ type: 'broadcast', event: 'sig', payload: { type, from: me.id, to, name: me.username, data } });
+    vc.q = []; vc.qt = null; vc.retry = 0;
+    const V = vc;
+    // antrean kirim: Supabase Realtime membatasi ~10 pesan/detik, kandidat ICE yang dikirim sekaligus bisa hilang
+    V.send = (type, to, data) => {
+        V.q.push({ type, from: me.id, to, name: me.username, data });
+        if (!V.qt) V.qt = setInterval(() => { const m = V.q.shift(); if (!m) { clearInterval(V.qt); V.qt = null; return; } ch.send({ type: 'broadcast', event: 'sig', payload: m }); }, 110);
+    };
+    try {
+        const AC = window.AudioContext || window.webkitAudioContext, cx = new AC(), an = cx.createAnalyser(), buf = new Uint8Array(128);
+        an.fftSize = 256; cx.createMediaStreamSource(stream).connect(an); V.ctx = cx;
+        V.meter = setInterval(() => { an.getByteTimeDomainData(buf); let m = 0; for (const x of buf) m = Math.max(m, Math.abs(x - 128)); const f = document.querySelector('#vlist .vchip'); if (f) f.classList.toggle('talk', !V.muted && m > 14); }, 160);
+    } catch (e) { }
     ch.on('broadcast', { event: 'sig' }, ({ payload }) => onSig(payload).catch(() => { }));
     ch.subscribe(st => {
         if (st === 'SUBSCRIBED')
@@ -4955,6 +5151,7 @@ function closePeer(id) {
     p.pc.close();
     if (p.el) {
         p.el.srcObject = null;
+        p.el.remove();
     }
     drawVoice();
 }
@@ -4965,16 +5162,25 @@ function makePeer(id, init) {
     vc.stream.getTracks().forEach(t => pc.addTrack(t, vc.stream));
     pc.onicecandidate = e => e.candidate && vc?.send('ice', id, e.candidate.toJSON());
     pc.ontrack = e => {
-        p.el = p.el || new Audio();
-        p.el.autoplay = true;
+        const st = e.streams[0] || new MediaStream([e.track]);
+        if (!p.el) {
+            // elemen audio harus ada di DOM supaya tidak diblokir browser
+            p.el = document.createElement('audio');
+            p.el.autoplay = true; p.el.playsInline = true; p.el.volume = 1;
+            let box = document.getElementById('vaud');
+            if (!box) { box = document.createElement('div'); box.id = 'vaud'; box.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;overflow:hidden'; document.body.appendChild(box); }
+            box.appendChild(p.el);
+        }
         p.el.muted = !!(vc && (vc.deaf || vc.loc[id]));
-        p.el.srcObject = e.streams[0];
-        p.el.play().catch(() => { });
+        p.el.srcObject = st;
+        p.el.play().catch(() => toast('Ketuk layar sekali untuk mengaktifkan suara teman'));
         drawVoice();
     };
     pc.onconnectionstatechange = () => {
-        if (pc.connectionState === 'failed')
+        if (pc.connectionState === 'failed') {
             closePeer(id);
+            if (vc && vc.retry++ < 3) vc.send('hello', null);
+        }
         else
             drawVoice();
     };
@@ -5027,7 +5233,9 @@ function leaveVoice() {
     if (!vc)
         return;
     const v = vc;
-    v.send('bye', null);
+    clearInterval(v.meter); clearInterval(v.qt);
+    try { v.ctx && v.ctx.close(); } catch (e) { }
+    v.ch.send({ type: 'broadcast', event: 'sig', payload: { type: 'bye', from: me.id, to: null, name: me.username } });
     Object.keys(v.peers).forEach(closePeer);
     v.stream.getTracks().forEach(t => t.stop());
     setTimeout(() => sb.removeChannel(v.ch), 300);
@@ -5545,19 +5753,70 @@ const TMDB_G = { 28: 'Aksi', 12: 'Petualangan', 16: 'Animasi', 35: 'Komedi', 80:
 
 // ---- resolusi & sumber video ----
 const resNum = r => parseInt(String(r || '').replace(/\D/g, ''), 10) || 0;
-const okUrl = u => /^https?:\/\//i.test(String(u || '').trim());
+// ---- deteksi YouTube: semua bentuk link (watch, youtu.be, embed, shorts, live, /v/, music., m., nocookie, playlist, link tanpa https) ----
+const YT_HOST = /^(?:[a-z0-9-]+\.)*(?:youtube\.com|youtube-nocookie\.com|youtu\.be|youtubekids\.com)$/i;
+const YT_ID = /^[\w-]{11}$/;
+function ytTime(x) {
+    x = String(x || '').trim();
+    if (!x) return 0;
+    if (/^\d+$/.test(x)) return +x;
+    const m = x.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
+    return m ? (+m[1] || 0) * 3600 + (+m[2] || 0) * 60 + (+m[3] || 0) : 0;
+}
+function ytParse(u) {
+    let s = String(u == null ? '' : u).trim();
+    if (!s || /\s/.test(s)) return null;
+    s = s.replace(/^<|>$/g, '');
+    if (/^(?:www\.|m\.|music\.|gaming\.)?(?:youtube(?:-nocookie)?\.com|youtu\.be)\b/i.test(s)) s = 'https://' + s; // tanpa https://
+    else if (/^\/\//.test(s)) s = 'https:' + s;
+    let L; try { L = new URL(s); } catch (e) { return null; }
+    if (!/^https?:$/.test(L.protocol) || !YT_HOST.test(L.hostname)) return null;
+    const q = L.searchParams, parts = L.pathname.split('/').filter(Boolean);
+    const first = (parts[0] || '').toLowerCase();
+    let id = '', list = (q.get('list') || '').trim();
+    if (/youtu\.be$/i.test(L.hostname)) id = parts[0] || '';
+    else if (['embed', 'shorts', 'live', 'v', 'e', 'vi', 'watch', 'clip'].includes(first) && parts[1] && first !== 'clip') id = parts[1];
+    else if (first === 'attribution_link') { try { const u2 = new URL(decodeURIComponent(q.get('u') || ''), 'https://www.youtube.com'); id = u2.searchParams.get('v') || ''; } catch (e) { } }
+    if (!id) id = q.get('v') || q.get('vi') || '';
+    id = id.replace(/[^\w-].*$/, '');
+    if (id === 'videoseries') id = '';
+    if (!YT_ID.test(id)) id = '';
+    if (!id && !list) return null;
+    const start = ytTime(q.get('t') || q.get('start') || (L.hash.match(/[#&]t=([^&]+)/) || [])[1]);
+    return { id, list, start, kind: id ? (first === 'shorts' ? 'shorts' : first === 'live' ? 'live' : 'video') : 'playlist' };
+}
+const isYt = u => !!ytParse(u);
+const ytCanon = u => { const p = ytParse(u); if (!p) return String(u || '').trim(); const a = []; if (p.id) a.push('v=' + p.id); if (p.list) a.push('list=' + p.list); if (p.start) a.push('t=' + p.start); return p.id ? 'https://www.youtube.com/watch?' + a.join('&') : 'https://www.youtube.com/playlist?list=' + p.list; };
+const ytThumb = u => { const p = ytParse(u); return p && p.id ? 'https://img.youtube.com/vi/' + p.id + '/hqdefault.jpg' : null; };
+// jenis sumber: youtube | hls | mp4 | cdn
+const srcKind = u => isYt(u) ? 'youtube' : /\.m3u8(\?|#|$)/i.test(u || '') ? 'hls' : /\.(mp4|m4v|webm|mov|mkv|ogv)(\?|#|$)/i.test(u || '') ? 'mp4' : 'cdn';
+// rapikan link: YouTube diseragamkan ke https://www.youtube.com/watch?v=ID, lainnya cukup di-trim
+const fixUrl = u => isYt(u) ? ytCanon(u) : String(u == null ? '' : u).trim();
+const srcRank = x => isYt(x && x.url) ? 1e5 : resNum(x && x.res);
+const okUrl = u => /^https?:\/\//i.test(String(u || '').trim()) || isYt(u);
+// judul video YouTube lewat oEmbed (tanpa API key)
+async function ytTitle(u) {
+    try {
+        const ctl = new AbortController(), tm = setTimeout(() => ctl.abort(), 6000);
+        const r = await fetch('https://www.youtube.com/oembed?format=json&url=' + encodeURIComponent(ytCanon(u)), { signal: ctl.signal });
+        clearTimeout(tm);
+        if (!r.ok) return null;
+        const j = await r.json();
+        return j && j.title ? String(j.title).trim() : null;
+    } catch (e) { return null; }
+}
 const catLabel = t => t && t.category ? String(t.category).replace(/^./, c => c.toUpperCase()) : '';
 
 // rapikan daftar sumber: buang link tidak valid / dobel, urut resolusi naik
 function cleanSources(list) {
     const seen = new Set(), out = [];
     (Array.isArray(list) ? list : []).forEach(s => {
-        const url = String((s && (s.url || s.link || s.src)) || '').trim();
+        const url = fixUrl((s && (s.url || s.link || s.src || s.source_quality)) || '');
         if (!okUrl(url) || seen.has(url)) return;
         seen.add(url);
-        out.push({ res: String((s && (s.res || s.resolution || s.quality)) || '').trim() || 'Auto', url });
+        out.push({ res: isYt(url) ? 'YouTube' : String((s && (s.res || s.resolution || s.quality || s.nama_quality)) || '').trim() || 'Auto', url });
     });
-    return out.sort((a, b) => resNum(a.res) - resNum(b.res));
+    return out.sort((a, b) => srcRank(a) - srcRank(b));
 }
 
 // pilih sumber terbaik: resolusi tertinggi yang <= batas (HP: 720p, layar besar: 1080p) atau pilihan user
@@ -5566,8 +5825,8 @@ function pickSrc(it, limit) {
     if (!s.length) return null;
     const pref = localStorage.nm_res || 'auto';
     const lim = limit || (pref === 'auto' ? (innerWidth <= 600 ? 720 : 1080) : +pref || 1080);
-    const known = [...s].filter(x => resNum(x.res)).sort((a, b) => resNum(a.res) - resNum(b.res));
-    if (!known.length) return s[0];
+    const known = [...s].filter(x => resNum(x.res) && !isYt(x.url)).sort((a, b) => resNum(a.res) - resNum(b.res));
+    if (!known.length) return s.find(x => !isYt(x.url)) || s[0];
     const ok = known.filter(x => resNum(x.res) <= lim);
     return ok.length ? ok[ok.length - 1] : known[0];
 }
@@ -5575,6 +5834,7 @@ function pickSrc(it, limit) {
 // ---- judul ----
 // judul dari nama file: "Spider-Man.No.Way.Home.2021.1080p.WEB-DL.mp4" -> "Spider Man No Way Home"
 const guessTitle = u => {
+    const yp = ytParse(u); if (yp) return 'YouTube ' + (yp.id || yp.list);
     let n = '';
     try { n = decodeURIComponent(String(u).split('?')[0].split('#')[0].split('/').pop()); } catch (e) { n = String(u).split('/').pop(); }
     return n.replace(/\.[a-z0-9]{2,4}$/i, '').replace(/[._]+/g, ' ')
@@ -5600,7 +5860,7 @@ function normItem(x) {
     if (typeof x === 'string') x = { video_url: x };
     if (!x || typeof x !== 'object') return null;
     const pk = (...k) => { for (const n of k) if (x[n] != null && x[n] !== '') return x[n]; return null; };
-    const one = (u, res) => okUrl(u) ? [{ res: String(res || 'Auto'), url: String(u).trim() }] : [];
+    const one = (u, res) => okUrl(u) ? [{ res: isYt(u) ? 'YouTube' : String(res || 'Auto'), url: fixUrl(u) }] : [];
 
     let sources = cleanSources(x.sources);
     if (!sources.length) sources = one(pk('video_url', 'video', 'url', 'link', 'src', 'file', 'stream'), pk('res', 'resolution', 'quality'));
@@ -5615,7 +5875,7 @@ function normItem(x) {
             season: +(e.season || e.musim) || 1,
             number: +(e.number || e.no || e.episode || e.ep) || k + 1,
             name: nm != null && nm !== '' ? String(nm).slice(0, 200) : null,
-            thumb: okUrl(th) ? String(th).trim() : null,
+            thumb: okUrl(th) ? String(th).trim() : (src.every(x => isYt(x.url)) ? ytThumb(src[0].url) : null),
             sources: src
         };
     }).filter(Boolean);
@@ -5842,6 +6102,7 @@ async function catPick(inp) {
     catRows = rows;
     if (!rows.length) { box.innerHTML = '<p class="hint">Tidak ada judul yang punya link video.</p>'; return; }
 
+    const hasYt = r => [...r.sources, ...r.episodes.flatMap(e => e.sources)].some(s => isYt(s.url));
     const maxRes = r => Math.max(0, ...r.sources.map(s => resNum(s.res)), ...r.episodes.flatMap(e => e.sources.map(s => resNum(s.res))));
     const count = a => a.reduce((m, k) => (k && (m[k] = (m[k] || 0) + 1), m), {});
     const pills = o => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `<span class="pill">${esc(k)} × ${v}</span>`).join('');
@@ -5851,9 +6112,9 @@ async function catPick(inp) {
 
     box.innerHTML = `<div class="impsum"><p><b>${rows.length}</b> judul terbaca · ${rows.length - nS} film · ${nS} series · ${nE} episode</p>
 <p class="hint">Kategori</p><div>${pills(count(rows.map(r => r.category || (r.type === 'series' ? 'series' : 'film'))))}</div>
-<p class="hint">Resolusi tertinggi</p><div>${pills(count(rows.map(r => maxRes(r) ? maxRes(r) + 'p' : 'Auto')))}</div>
+<p class="hint">Resolusi tertinggi</p><div>${pills(count(rows.map(r => maxRes(r) ? maxRes(r) + 'p' : hasYt(r) ? 'YouTube' : 'Auto')))}</div>
 ${dup ? `<p class="hint">${dup} judul sudah ada di katalog dan akan dilewati.</p>` : ''}${bad.length ? `<p class="hint">${bad.length} item tanpa link video diabaikan: ${esc(bad.slice(0, 5).join(', '))}${bad.length > 5 ? '…' : ''}</p>` : ''}${extra ? '<p class="hint">Data akun, riwayat, dan pengaturan di file ini tidak ikut diimpor (hanya katalog).</p>' : ''}</div>
-<div class="implist">${rows.slice(0, 60).map(r => `<div class="impit"><b>${esc(r.title)}</b><small>${[r.year, r.type === 'series' ? r.episodes.length + ' eps' : '', maxRes(r) ? maxRes(r) + 'p' : '', r.category ? esc(r.category) : (r.type === 'series' ? '' : 'film'), isDup(titles, r) ? 'sudah ada' : ''].filter(Boolean).join(' · ')}</small></div>`).join('')}${rows.length > 60 ? `<p class="hint">…dan ${rows.length - 60} lainnya</p>` : ''}</div>
+<div class="implist">${rows.slice(0, 60).map(r => `<div class="impit"><b>${esc(r.title)}</b><small>${[r.year, r.type === 'series' ? r.episodes.length + ' eps' : '', maxRes(r) ? maxRes(r) + 'p' : hasYt(r) ? 'YouTube' : '', r.category ? esc(r.category) : (r.type === 'series' ? '' : 'film'), isDup(titles, r) ? 'sudah ada' : ''].filter(Boolean).join(' · ')}</small></div>`).join('')}${rows.length > 60 ? `<p class="hint">…dan ${rows.length - 60} lainnya</p>` : ''}</div>
 <div class="srow"><span>Cari poster otomatis (TMDB)<small>Poster, sinopsis, genre, dan tahun diisi dari TMDB</small></span><button class="sw on" id="cat_tm" role="switch" aria-checked="true" onclick="this.classList.toggle('on');this.setAttribute('aria-checked',this.classList.contains('on'))"></button></div>
 <button class="btn glow" id="cat_go" style="width:100%" onclick="catRun()">Mulai import</button>`;
 }
@@ -5941,14 +6202,15 @@ function jqRecords(j) {
 function jqLadder(list, on) {
     const seen = new Set(), real = [];
     list.forEach(s => {
-        const url = String((s && s.url) || '').trim();
+        const url = fixUrl((s && s.url) || '');
         if (!okUrl(url) || seen.has(url)) return;
         seen.add(url);
+        if (isYt(url)) return real.push({ res: 'YouTube', url }); // YouTube: tidak punya tangga resolusi palsu (#qXXXp), kualitas diatur YouTube sendiri
         const n = resNum(s.res);
         real.push({ res: n ? n + 'p' : String(s.res || 'Auto'), url });
     });
-    const asc = (a, b) => resNum(a.res) - resNum(b.res);
-    const nums = real.filter(s => resNum(s.res)).sort(asc);
+    const asc = (a, b) => srcRank(a) - srcRank(b);
+    const nums = real.filter(s => resNum(s.res) && !isYt(s.url)).sort(asc);
     if (!on || !nums.length) return real.sort(asc);
     const max = resNum(nums[nums.length - 1].res), out = [...real];
     JQ_LADDER.filter(r => r <= max && !nums.some(s => resNum(s.res) === r)).forEach(r => {
@@ -5988,18 +6250,19 @@ function jqBuild(records, o) {
         if (!src.length && x.source_quality) src.push({ res: x.nama_quality, url: x.source_quality });
         const sources = jqLadder(src, o.ladder);
         if (!sources.length) return;
-        const raw = String(an.nama_anime || x.anime_title || x.nama_anime || '').trim() || guessTitle(src.find(s => okUrl(s.url)).url);
+        const firstUrl = fixUrl(src.find(s => okUrl(s.url)).url), ytOnly = sources.every(s => isYt(s.url));
+        const raw = String(an.nama_anime || x.anime_title || x.nama_anime || '').trim() || guessTitle(firstUrl);
         const key = x.anime_id != null ? 'id:' + x.anime_id : 'n:' + raw.toLowerCase();
         let g = groups.get(key);
-        if (!g) groups.set(key, g = { raw, cover: okUrl(an.gambar_anime) ? String(an.gambar_anime).trim() : null, eps: [], urls: [], hint: '' });
-        g.urls.push(...src.map(q => String(q.url || '')).filter(okUrl));
+        if (!g) groups.set(key, g = { raw, cover: okUrl(an.gambar_anime) ? String(an.gambar_anime).trim() : null, eps: [], urls: [], hint: '', ytGuess: !(an.nama_anime || x.anime_title || x.nama_anime) && ytOnly ? firstUrl : '' });
+        g.urls.push(...src.map(q => fixUrl(q.url)).filter(okUrl));
         g.hint = g.hint || x.category || x.kategori || an.category || an.kategori || an.tipe || an.type || '';
         const th = x.thumbnail_episode;
         g.eps.push({
             season: 1,
             number: +x.nomor_episode || g.eps.length + 1,
             name: x.judul_episode ? String(x.judul_episode).slice(0, 200) : null,
-            thumb: okUrl(th) ? String(th).trim() : null,
+            thumb: okUrl(th) ? String(th).trim() : (sources.every(s => isYt(s.url)) ? ytThumb(sources[0].url) : null),
             sources
         });
     });
@@ -6011,8 +6274,8 @@ function jqBuild(records, o) {
             title: sp.title, guessed: false, year: sp.year || jqFolder(g.urls[0]).year, genre: null, category: jqCategory(g, series),
             type: series ? 'series' : 'movie', description: null,
             sources: series ? [] : eps[0].sources, episodes: series ? eps : [], _eps: eps,
-            thumbnail_url: g.cover || (o.tmdb === false && eps[0].thumb ? eps[0].thumb + '#frame' : null), // frame video bukan poster: dipakai hanya bila TMDB tidak menemukan
-            fallbackThumb: g.cover ? null : (eps[0].thumb ? eps[0].thumb + '#frame' : null),
+            thumbnail_url: g.cover || (o.tmdb === false && eps[0].thumb ? eps[0].thumb + (isYt(eps[0].sources[0].url) ? '' : '#frame') : null), // frame video bukan poster: dipakai hanya bila TMDB tidak menemukan
+            fallbackThumb: g.cover ? null : (eps[0].thumb ? eps[0].thumb + (isYt(eps[0].sources[0].url) ? '' : '#frame') : null), _ytGuess: g.ytGuess || '',
             alts: (() => { const f = jqFolder(g.urls[0]); return f.name && f.name.toLowerCase() !== sp.title.toLowerCase() ? [f.name] : []; })(),
             tmdb_id: null, created_at: null,
             video_url: series ? null : pickSrc({ sources: eps[0].sources }, 1080).url
@@ -6058,6 +6321,10 @@ async function jqProcess(items, o, bad = []) {
         if (empty.length) impPre += `${empty.length} file tidak berisi data film (tidak ada source_quality): ${jqNames(empty)}\n`;
 
         const rows = jqBuild(records, o);
+        await Promise.all(rows.filter(r => r._ytGuess).map(async r => { // judul asli video YouTube (oEmbed) menggantikan "YouTube <id>"
+            const tt = await ytTitle(r._ytGuess);
+            if (tt) { const sp2 = splitTitle(tt); r.title = sp2.title || tt; if (sp2.year && !r.year) r.year = sp2.year; }
+        }));
         if (!rows.length) {
             if (ids.length && jqHas !== false) await sb.from('json_queue').delete().in('id', ids);
             return finishImport('Tidak ada film yang bisa ditambahkan.');
@@ -6256,7 +6523,7 @@ function rwInit(row) {
     const mk = d => {
         const b = document.createElement('button');
         b.type = 'button';
-        b.className = 'rw-b ' + (d < 0 ? 'l' : 'r');
+        b.className = 'rw-b ' + (d < 0 ? 'rw-l' : 'rw-r');
         b.setAttribute('aria-label', d < 0 ? 'Geser ke kiri' : 'Geser ke kanan');
         b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="${d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg>`;
         b.onclick = () => row.scrollBy({ left: d * Math.max(200, row.clientWidth * .85), behavior: 'smooth' });
@@ -7263,6 +7530,7 @@ async function dtShare(t) {
 function dtDownload(t, e) {
     const u = (pickSrc(e) || {}).url || e.video_url;
     if (!u) return toast('Sumber video belum tersedia');
+    if (isYt(u)) return toast('Episode ini dari YouTube, tidak bisa diunduh. Buka lewat tombol putar');
     if (/\.m3u8(\?|#|$)/i.test(u)) return toast('Episode ini berformat streaming (m3u8), belum bisa diunduh');
     const a = document.createElement('a');
     a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.download = `${t.title} - Ep ${e.number}.mp4`;
@@ -7363,7 +7631,7 @@ function dtRender(c) {
 
     root.innerHTML = `<div class="dt">
 <div class="dt-hero"><i class="dt-bgi" ${bg(sm(t.thumbnail_url, 'w185'))}></i>
-<div class="dt-poster" role="img" aria-label="Poster ${esc(t.title)}" ${bg(sm(t.thumbnail_url, 'w500'))}></div>
+<div class="dt-poster" role="button" tabindex="0" aria-pressed="false" aria-label="Poster ${esc(t.title)}. Ketuk untuk membalik dan membaca sinopsis"><div class="dt-pin"><div class="dt-pfront" ${bg(sm(t.thumbnail_url, 'w500'))}></div><div class="dt-pback"><i class="dt-pbg" ${bg(sm(t.thumbnail_url, 'w185'))}></i><b>Tentang film</b><div class="dt-pbody"><span class="dt-ptxt"></span></div></div></div></div>
 <h1 class="dt-title">${esc(t.title)}</h1><div class="dt-chips">${chips}</div></div>
 <section class="dt-card"><b class="dt-h">Sinopsis</b><p class="dt-syn ${t.description ? '' : 'ld'}" id="dtSyn">${desc}</p><button class="plink" id="dtSynB" hidden>Selengkapnya</button>
 <div class="dt-cta"><button class="btn big" id="dtGo" ${url ? '' : 'disabled'}>${ic('play')} <span>${esc(label)}</span></button><button class="btn big ghost ${subOn ? 'on' : ''}" id="dtSub" aria-pressed="${subOn}">${ic('bell')} <span>${subOn ? 'Berlangganan' : 'Subscribe'}</span></button></div>
@@ -7381,6 +7649,44 @@ ${isS ? `<div class="dt-eh"><h2>Episode (${eps.length})</h2><button class="dt-sq
     const syn = root.querySelector('#dtSyn'), synB = root.querySelector('#dtSynB');
     if ((t.description || '').length > 200) synB.hidden = false;
     synB.onclick = () => { const o = syn.classList.toggle('open'); synB.textContent = o ? 'Ringkas' : 'Selengkapnya'; };
+
+    // poster membalik + sinopsis diketik otomatis
+    {
+        const pst = root.querySelector('.dt-poster'), out = pst.querySelector('.dt-ptxt'), box = pst.querySelector('.dt-pbody');
+        let tm = 0, to = 0, seen = false;
+        const FK = 'nm_flip_ids', fl = () => { try { return JSON.parse(localStorage[FK] || '[]'); } catch (e) { return []; } };
+        try { seen = fl().indexOf(String(id)) > -1; } catch (e) { }
+        if (!seen) pst.classList.add('tease'); // isyarat animasi sampai pengguna mencoba sendiri
+        const stop = () => { clearInterval(tm); clearTimeout(to); };
+        const type = () => {
+            // sinopsis + info otomatis dari TMDB (dibaca saat diklik, jadi ikut data terbaru)
+            const m = t._tm || {}, rt = Number(m.rating) > 0 ? Number(m.rating).toFixed(1) + ' / 10' : '';
+            const info = [['Genre', t.genre || m.genres], ['Rilis', rel || m.year], ['Rating TMDB', rt], ['Tipe', isS ? 'Series' + (eps.length ? ' · ' + eps.length + ' episode' : '') : 'Film'], ['Studio', t.studio], ['Status', stTxt]]
+                .filter(x => x[1]).map(x => x[0] + ' · ' + x[1]);
+            const full = [((syn.textContent || '').trim() || 'Belum ada sinopsis.'), info.join('\n')].filter(Boolean).join('\n\n');
+            stop(); out.textContent = ''; pst.classList.remove('done');
+            if (matchMedia('(prefers-reduced-motion: reduce)').matches) { out.textContent = full; pst.classList.add('done'); return; }
+            let i = 0; const step = Math.max(1, Math.ceil(full.length / 420));
+            tm = setInterval(() => {
+                if (!pst.isConnected) return stop();
+                i = Math.min(full.length, i + step);
+                out.textContent = full.slice(0, i);
+                box.scrollTop = box.scrollHeight;
+                if (i >= full.length) { stop(); pst.classList.add('done'); }
+            }, 24);
+        };
+        const flip = () => {
+            const o = pst.classList.toggle('flip');
+            pst.classList.remove('tease');
+            try { const a = fl(); if (a.indexOf(String(id)) < 0) { a.push(String(id)); localStorage[FK] = JSON.stringify(a.slice(-500)); } } catch (e) { }
+            pst.setAttribute('aria-pressed', o);
+            stop();
+            if (typeof sClick === 'function') sClick();
+            if (o) to = setTimeout(type, 420); else pst.classList.remove('done');
+        };
+        pst.onclick = flip;
+        pst.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } };
+    }
 
     // aksi utama
     root.querySelector('#dtGo').onclick = () => c.play(tgt ? tgt.e : null);
@@ -7451,6 +7757,326 @@ ${isS ? `<div class="dt-eh"><h2>Episode (${eps.length})</h2><button class="dt-sq
     }
     refreshViews(id);
 }
+</script>
+<style id="nm-3d">
+/* ===== Hover 3D poster: tiap level visual punya karakter sendiri (warna flat, tanpa gradient) ===== */
+.poster{--tx:0;--ty:0}
+/* LOW · "Bersih": tanpa transform & tanpa blur. Cincin aksen tipis + kilau datar, paling ringan untuk HP/PC kentang */
+html[data-fx=low] .poster:hover{outline:2px solid var(--ac);outline-offset:-2px;box-shadow:none}
+html[data-fx=low] .poster:hover::after{opacity:1;background:rgba(255,255,255,.1);mix-blend-mode:normal}
+@media (hover:hover) and (pointer:fine){
+/* MEDIUM · "Lincah": miring halus (±9°), naik sedikit, kilau diagonal menyapu poster sekali */
+html[data-fx=medium] .poster{transition:transform .5s cubic-bezier(.22,.8,.24,1),box-shadow .4s}
+html[data-fx=medium] .poster.tl{transition:transform .14s linear,box-shadow .3s}
+html[data-fx=medium] .poster:hover{transform:perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateY(-6px) scale(1.035);box-shadow:0 14px 28px rgba(0,0,0,.42),inset 0 0 0 1px rgba(255,255,255,.14)}
+html[data-fx=medium] .poster::after{content:"";position:absolute;inset:auto;top:-20%;left:-70%;width:45%;height:140%;background:rgba(255,255,255,.15);transform:rotate(18deg);opacity:1;mix-blend-mode:normal;transition:left .7s cubic-bezier(.22,.8,.24,1)}
+html[data-fx=medium] .poster:hover::after{left:130%}
+/* HIGH · "Premium": miring dalam (±16°), bayangan berlawanan arah miring, kilau mengikuti kursor, label & tag bergeser (parallax), ring cahaya tema */
+html[data-fx=high] .poster{transition:transform .7s cubic-bezier(.16,1,.3,1),box-shadow .6s cubic-bezier(.16,1,.3,1)}
+html[data-fx=high] .poster.tl{transition:transform .1s linear,box-shadow .25s}
+html[data-fx=high] .poster:hover{transform:perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) scale(1.07);box-shadow:calc(var(--tx)*-16px) calc(var(--ty)*-14px + 26px) 46px rgba(0,0,0,.6),0 0 38px rgba(var(--glow),.42),inset 0 0 0 1px rgba(255,255,255,.22)}
+html[data-fx=high] .poster:active{transform:perspective(1000px) rotateX(var(--rx)) rotateY(var(--ry)) scale(1.02)}
+html[data-fx=high] .poster::after{display:none;content:"";position:absolute;inset:auto;left:var(--px);top:var(--py);width:70%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.38);filter:blur(34px);transform:translate(-50%,-50%);mix-blend-mode:soft-light;opacity:0}
+html[data-fx=high] .poster:hover::after{display:block;animation:nmglare .45s ease-out forwards}
+@keyframes nmglare{to{opacity:.9}}
+html[data-fx=high] .poster span,html[data-fx=high] .poster .tag,html[data-fx=high] .poster .nwb,html[data-fx=high] .poster.frm .frmi{transition:transform .3s ease-out}
+html[data-fx=high] .poster:hover span{transform:translate(calc(var(--tx)*-7px),calc(var(--ty)*-5px))}
+html[data-fx=high] .poster:hover .tag,html[data-fx=high] .poster:hover .nwb{transform:translate(calc(var(--tx)*6px),calc(var(--ty)*5px))}
+html[data-fx=high] .poster.frm:hover .frmi{transform:translate(calc(var(--tx)*-10px),calc(var(--ty)*-6px)) scale(1.06)}
+}
+/* layar sentuh: umpan balik tekan saja */
+@media (hover:none){
+html[data-fx=medium] .poster:active,html[data-fx=high] .poster:active{transform:scale(.96);transition:transform .15s}
+}
+@media (prefers-reduced-motion:reduce){html .poster:hover{transform:none!important}}
+</style>
+<script id="nm-3d-js">
+(function () {
+    if (!matchMedia('(hover:hover) and (pointer:fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var cur = null, raf = 0, ex = 0, ey = 0, root = document.documentElement;
+    function put(p, rx, ry, px, py, tx, ty) {
+        var st = p.style;
+        st.setProperty('--rx', rx + 'deg'); st.setProperty('--ry', ry + 'deg');
+        st.setProperty('--px', px + '%'); st.setProperty('--py', py + '%');
+        st.setProperty('--tx', tx); st.setProperty('--ty', ty);
+    }
+    function reset(p) { p.classList.remove('tl'); put(p, 0, 0, 50, 50, 0, 0); }
+    function frame() {
+        raf = 0;
+        if (!cur) return;
+        var r = cur.getBoundingClientRect(), k = root.dataset.fx === 'high' ? 22 : 12;
+        var px = Math.min(1, Math.max(0, (ex - r.left) / r.width)), py = Math.min(1, Math.max(0, (ey - r.top) / r.height));
+        put(cur, ((.5 - py) * k).toFixed(1), ((px - .5) * k).toFixed(1), (px * 100).toFixed(0), (py * 100).toFixed(0), ((px - .5) * 2).toFixed(2), ((py - .5) * 2).toFixed(2));
+    }
+    document.addEventListener('pointermove', function (e) {
+        if (e.pointerType === 'touch' || root.dataset.fx === 'low') return;
+        var p = e.target.closest && e.target.closest('.poster');
+        if (p !== cur) { if (cur) reset(cur); cur = p; if (p) p.classList.add('tl'); }
+        if (!p) return;
+        ex = e.clientX; ey = e.clientY;
+        if (!raf) raf = requestAnimationFrame(frame);
+    }, { passive: true });
+    document.addEventListener('pointerout', function (e) {
+        var p = e.target.closest && e.target.closest('.poster');
+        if (p && !p.contains(e.relatedTarget)) { reset(p); if (cur === p) cur = null; }
+    }, { passive: true });
+})();
+</script>
+<style id="nm-3d-2">
+/* ===== 3D lebih terasa: zoom + terangkat, tilt lebih dalam, glow & kilau berulang (loop) ===== */
+@media (hover:hover) and (pointer:fine){
+/* ruang agar poster yang membesar tidak terpotong baris geser */
+html[data-fx=medium] .row,html[data-fx=high] .row{padding:26px 16px 34px;margin:-16px -16px}
+html[data-fx=medium] .poster:hover,html[data-fx=high] .poster:hover{z-index:20}
+/* MEDIUM: terangkat jelas, tanpa loop (hemat tenaga) */
+html[data-fx=medium] .poster:hover{transform:perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(46px) translateY(-4px);box-shadow:0 22px 38px rgba(0,0,0,.5),0 0 0 1px rgba(var(--glow),.55),inset 0 0 0 1px rgba(255,255,255,.14)}
+/* HIGH: zoom ~11%, tilt 22°, bevel cahaya di tepi, bayangan jatuh berlawanan arah */
+html[data-fx=high] .poster:hover{transform:perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(90px);
+  animation:pop .55s cubic-bezier(.2,.9,.3,1.3) backwards,nmglow 2.2s ease-in-out infinite}
+html[data-fx=high] .poster:active{transform:perspective(900px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(60px)}
+@keyframes nmglow{
+ 0%,100%{box-shadow:calc(var(--tx)*-20px) calc(var(--ty)*-18px + 34px) 54px rgba(0,0,0,.65),0 0 26px 2px rgba(var(--glow),.35),0 0 0 1px rgba(var(--glow),.6),inset calc(var(--tx)*-12px) calc(var(--ty)*-12px) 24px rgba(255,255,255,.1)}
+ 50%{box-shadow:calc(var(--tx)*-20px) calc(var(--ty)*-18px + 34px) 54px rgba(0,0,0,.65),0 0 74px 10px rgba(var(--glow),.8),0 0 0 2px rgba(var(--glow),1),inset calc(var(--tx)*-12px) calc(var(--ty)*-12px) 24px rgba(255,255,255,.1)}}
+/* kilau diagonal yang menyapu berulang saat poster disorot */
+html[data-fx=high] .poster:not(.frm)::before{content:"";position:absolute;top:-30%;left:-80%;width:38%;height:160%;background:rgba(255,255,255,.2);transform:rotate(18deg);opacity:0;pointer-events:none;z-index:1}
+html[data-fx=high] .poster:not(.frm):hover::before{opacity:1;animation:nmsweep 2.4s ease-in-out infinite}
+@keyframes nmsweep{0%{left:-80%}55%,100%{left:140%}}
+/* fokus sinematik: poster lain meredup & mundur sedikit */
+html[data-fx=high] :is(.row,.grid):has(.poster:hover) .poster:not(:hover){opacity:.5;transform:perspective(900px) scale(.95);transition:opacity .4s,transform .5s cubic-bezier(.16,1,.3,1)}
+}
+</style>
+<style id="nm-3d-3">
+/* ===== Objek/karakter terpisah dari latar (high): lapisan depan melayang di sumbu Z ===== */
+.poster .pop,.poster .cut{display:none}
+@media (hover:hover) and (pointer:fine){
+html[data-ultra] .poster:not(.frm):hover{overflow:visible;transform-style:preserve-3d}
+/* tanpa file cutout: lapisan tengah poster diangkat & dibesarkan, tepinya memudar (perkiraan, bukan potongan asli) */
+html[data-ultra] .poster:not(.frm):hover .pop{display:block;position:absolute;inset:0;border-radius:inherit;background:inherit;pointer-events:none;
+  -webkit-mask-image:radial-gradient(ellipse 52% 46% at 50% 46%,#000 55%,transparent 74%);mask-image:radial-gradient(ellipse 52% 46% at 50% 46%,#000 55%,transparent 74%);
+  transform:translate3d(calc(var(--tx)*9px),calc(var(--ty)*7px),70px) scale(1.14);transition:transform .12s linear}
+/* ada cutout PNG transparan: karakter asli keluar dari bingkai */
+html[data-ultra] .poster .cut{display:block;position:absolute;left:-4%;bottom:-3%;width:108%;height:auto;max-height:112%;object-fit:contain;pointer-events:none;transition:transform .7s cubic-bezier(.16,1,.3,1),filter .5s}
+html[data-ultra] .poster:hover .cut{transform:translate3d(calc(var(--tx)*14px),calc(var(--ty)*10px),120px) scale(1.08);transition:transform .12s linear;filter:drop-shadow(0 26px 18px rgba(0,0,0,.65)) drop-shadow(0 0 20px rgba(var(--glow),.55))}
+html[data-ultra] .poster:not(.frm):hover .pop+.cut~span,html[data-ultra] .poster:not(.frm):hover span{transform:translate3d(calc(var(--tx)*-8px),calc(var(--ty)*-5px),46px)}
+html[data-ultra] .poster:hover .tag,html[data-ultra] .poster:hover .nwb{transform:translate3d(calc(var(--tx)*7px),calc(var(--ty)*5px),36px)}
+/* kilau yang bisa bocor keluar bingkai dimatikan saat objek keluar */
+html[data-ultra] .poster:not(.frm):hover::before,html[data-ultra] .poster:not(.frm):hover::after{display:none}
+}
+</style>
+<style id="nm-3d-4">
+/* cutout sejajar persis dengan poster (cover), lalu keluar bingkai saat hover; latar digelapkan agar terpisah */
+html[data-ultra] .poster .cut{left:0;bottom:auto;top:0;width:100%;height:100%;max-height:none;object-fit:cover;opacity:0;transition:opacity .35s,transform .7s cubic-bezier(.16,1,.3,1)}
+html[data-ultra] .poster.has-cut .cut{opacity:1}
+@media (hover:hover) and (pointer:fine){
+html[data-ultra] .poster.has-cut:hover{overflow:visible;transform-style:preserve-3d}
+html[data-ultra] .poster.has-cut:hover::after{display:block;content:"";position:absolute;inset:0;left:0;top:0;width:auto;height:auto;aspect-ratio:auto;border-radius:inherit;background:rgba(0,0,0,.45);filter:none;mix-blend-mode:normal;transform:none;opacity:1;animation:none}
+}
+</style>
+<script id="nm-cut-js">
+/* Pemisah objek otomatis (hanya visual High, saat poster disorot): MediaPipe Image Segmenter dimuat sekali, hasil di-cache */
+(function () {
+    var root = document.documentElement, segP = null, busy = false, queue = [], cache = new Map(), order = [], dead = false;
+    var V = '0.10.14', CDN = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@' + V;
+    function seg() {
+        if (!segP) segP = import(CDN + '/vision_bundle.mjs').then(function (m) {
+            return m.FilesetResolver.forVisionTasks(CDN + '/wasm').then(function (fs) {
+                return m.ImageSegmenter.createFromOptions(fs, { baseOptions: { modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/image_segmenter/deeplab_v3/float32/1/deeplab_v3.tflite' }, runningMode: 'IMAGE', outputCategoryMask: true, outputConfidenceMasks: false });
+            });
+        });
+        segP.catch(function () { dead = true; }); // model/CDN gagal dimuat: berhenti mencoba, poster tetap normal
+        return segP;
+    }
+    function urlOf(p) {
+        var m = /url\(["']?(.*?)["']?\)/.exec(getComputedStyle(p).backgroundImage || '');
+        return m ? m[1].replace(/\/t\/p\/w\d+\//, '/t/p/w342/') : '';
+    }
+    function load(u) {
+        return new Promise(function (ok, no) { var i = new Image(); i.crossOrigin = 'anonymous'; i.onload = function () { ok(i); }; i.onerror = no; i.src = u; });
+    }
+    function cutout(u) {
+        return Promise.all([seg(), load(u)]).then(function (r) {
+            var sg = r[0], img = r[1], res = sg.segment(img), mk = res.categoryMask, a = mk.getAsUint8Array(), w = mk.width, h = mk.height, n = a.length, fg = 0, i;
+            var m = document.createElement('canvas'); m.width = w; m.height = h;
+            var mc = m.getContext('2d'), md = mc.createImageData(w, h);
+            for (i = 0; i < n; i++) { if (a[i]) { fg++; md.data[i * 4 + 3] = 255; } }
+            try { mk.close(); res.close && res.close(); } catch (e) { }
+            var f = fg / n;
+            if (f < .04 || f > .9) throw 0; // tidak ada objek jelas / seluruh gambar: jangan dipaksa
+            mc.putImageData(md, 0, 0);
+            var c = document.createElement('canvas'); c.width = w; c.height = h;
+            var cx = c.getContext('2d');
+            cx.drawImage(img, 0, 0, w, h);
+            cx.globalCompositeOperation = 'destination-in';
+            cx.filter = 'blur(1.5px)'; // tepi halus
+            cx.drawImage(m, 0, 0);
+            return new Promise(function (ok) { c.toBlob(function (b) { ok(URL.createObjectURL(b)); }, 'image/webp', .9); });
+        });
+    }
+    function attach(p, b) {
+        if (!p.isConnected || p.querySelector('.cut')) return;
+        var im = document.createElement('img');
+        im.className = 'cut'; im.alt = ''; im.decoding = 'async'; im.src = b;
+        p.insertBefore(im, p.firstChild);
+        requestAnimationFrame(function () { p.classList.add('has-cut'); });
+    }
+    function pump() {
+        if (busy || dead || !queue.length) return;
+        var p = queue.shift(), u = urlOf(p);
+        if (!u) return pump();
+        if (cache.has(u)) { if (cache.get(u)) attach(p, cache.get(u)); return pump(); }
+        busy = true;
+        cutout(u).then(function (b) {
+            cache.set(u, b); order.push(u);
+            if (order.length > 60) { var o = order.shift(), ob = cache.get(o); if (ob) URL.revokeObjectURL(ob); cache.delete(o); }
+            attach(p, b);
+        }).catch(function (e) {
+            cache.set(u, null);
+        }).then(function () { busy = false; pump(); });
+    }
+    document.addEventListener('pointerover', function (e) {
+        if (root.dataset.fx !== 'high' || !root.dataset.ultra || e.pointerType === 'touch' || dead) return;
+        var p = e.target.closest && e.target.closest('.poster');
+        if (!p || p.classList.contains('frm') || p.classList.contains('has-cut') || p.dataset.cq) return;
+        p.dataset.cq = 1;
+        var c = p.querySelector('.cut');
+        if (c) { p.classList.add('has-cut'); return; } // cutout manual dari database
+        queue.push(p); pump();
+    }, { passive: true });
+})();
+</script>
+<style id="nm-flip">
+/* poster halaman detail: kartu yang bisa dibalik */
+.dt-poster{background:none;border:0;box-shadow:none;perspective:1100px;cursor:pointer;outline-offset:6px;-webkit-tap-highlight-color:transparent}
+.dt-pin{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .9s cubic-bezier(.2,.8,.2,1)}
+.dt-poster:not(.flip):hover .dt-pin{transform:rotateY(-10deg) rotateX(3deg)}
+.dt-poster.flip .dt-pin{transform:rotateY(180deg)}
+.dt-pfront,.dt-pback{position:absolute;inset:0;border-radius:var(--r);border:3px solid var(--ac);box-shadow:var(--sh);-webkit-backface-visibility:hidden;backface-visibility:hidden;overflow:hidden}
+.dt-pfront{background:var(--bg2) center/cover no-repeat}
+.dt-hint{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);font:700 .68rem/1 var(--font);font-style:normal;padding:6px 10px;border-radius:999px;background:rgba(0,0,0,.62);color:#fff;white-space:nowrap;opacity:.9;transition:opacity .3s}
+.dt-poster:hover .dt-hint{opacity:1}
+.dt-pback{transform:rotateY(180deg);background:var(--bg2);display:flex;flex-direction:column;text-align:left;padding:14px 14px 12px}
+.dt-pback b{font:700 .95rem var(--font);color:var(--ac2);margin-bottom:8px;flex:none}
+.dt-pbody{flex:1;overflow-y:auto;scrollbar-width:none;font-size:.78rem;line-height:1.55;color:var(--tx)}
+.dt-pbody::-webkit-scrollbar{display:none}
+.dt-ptxt::after{content:"";display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-.15em;background:var(--ac);animation:dtcaret .8s steps(1) infinite}
+.dt-poster.done .dt-ptxt::after{display:none}
+@keyframes dtcaret{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.dt-pin{transition:none}}
+</style>
+<style id="nm-flip2">
+/* sisi belakang: gambar poster yang sama, diburamkan + digelapkan datar agar teks terbaca */
+.dt-pback{background:var(--bg2)}
+.dt-pbg{position:absolute;inset:0;background:center/cover no-repeat;filter:blur(9px) brightness(.5) saturate(1.15);transform:scale(1.25)}
+.dt-pback b,.dt-pbody{position:relative;z-index:1}
+.dt-pback b{color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.6)}
+.dt-pbody{color:#fff;text-shadow:0 1px 5px rgba(0,0,0,.7)}
+</style>
+<style id="nm-flip3">
+/* isyarat tanpa teks: poster "mengintip" miring + cincin cahaya berdenyut, berhenti setelah pengguna pernah membalik */
+.dt-hint{display:none}
+.dt-poster.tease:not(.flip):not(:hover) .dt-pin{animation:dtTease 3.8s ease-in-out 1.2s infinite}
+.dt-poster.tease:not(.flip) .dt-pfront{animation:dtRing 3.8s ease-out 1.2s infinite}
+@keyframes dtTease{0%,58%,100%{transform:rotateY(0)}68%{transform:rotateY(-26deg) translateX(-4px)}78%{transform:rotateY(10deg)}88%{transform:rotateY(-6deg)}}
+@keyframes dtRing{0%,58%{box-shadow:var(--sh),0 0 0 0 rgba(var(--glow),.7)}100%{box-shadow:var(--sh),0 0 0 18px rgba(var(--glow),0)}}
+@media(prefers-reduced-motion:reduce){.dt-poster.tease .dt-pin,.dt-poster.tease .dt-pfront{animation:none}}
+</style>
+<style id="nm-flip4">
+.dt-ptxt{white-space:pre-wrap}
+/* isyarat dibuat halus: tilt kecil, cincin tipis, jarang muncul */
+.dt-poster.tease:not(.flip):not(:hover) .dt-pin{animation:dtTease 7s ease-in-out 3s infinite}
+.dt-poster.tease:not(.flip) .dt-pfront{animation:dtRing 7s ease-out 3s infinite}
+@keyframes dtTease{0%,86%,100%{transform:rotateY(0)}92%{transform:rotateY(-9deg)}96%{transform:rotateY(3deg)}}
+@keyframes dtRing{0%,86%{box-shadow:var(--sh),0 0 0 0 rgba(var(--glow),.32)}100%{box-shadow:var(--sh),0 0 0 9px rgba(var(--glow),0)}}
+</style>
+<style id="nm-glow">
+/* glow tipis: poster TMDB + latar poster di halaman sebelum pemutar (khusus visual High/Ultra) */
+html[data-fx=high] .dt-poster::after{content:"";position:absolute;inset:0;border-radius:var(--r);box-shadow:0 0 26px 2px rgba(var(--glow),.2);z-index:-1;pointer-events:none;animation:dtGlow 5s ease-in-out infinite}
+@keyframes dtGlow{0%,100%{box-shadow:0 0 22px 1px rgba(var(--glow),.14)}50%{box-shadow:0 0 44px 7px rgba(var(--glow),.34)}}
+html[data-fx=high] .dt-bgi{animation:dtBgGlow 7s ease-in-out infinite}
+@keyframes dtBgGlow{0%,100%{opacity:.5;transform:scale(1.1)}50%{opacity:.72;transform:scale(1.16)}}
+html[data-fx=low] .dt-poster::after,html[data-fx=low] .dt-bgi{animation:none}
+@media(prefers-reduced-motion:reduce){.dt-poster::after,.dt-bgi{animation:none}}
+</style>
+<style id="nm-frm">
+/* HIGH: poster yang berisi gambar di dalamnya (kartu bingkai) hidup: gambar bergerak pelan, kilau menyapu berkala, latar blur melayang, badge berdenyut */
+html[data-fx=high] .poster.frm .frmi{overflow:hidden}
+html[data-fx=high] .poster.frm .frmi::before,html[data-fx=high] .poster.frm .frmi::after{content:"";position:absolute;pointer-events:none}
+html[data-fx=high] .poster.frm .frmi::before{inset:0;background:inherit;animation:frmKB 14s ease-in-out infinite alternate}
+html[data-fx=high] .poster.frm:nth-child(odd) .frmi::before{animation-delay:-6s;animation-direction:alternate-reverse}
+@keyframes frmKB{from{transform:scale(1) translate(0,0)}to{transform:scale(1.14) translate(-3%,2%)}}
+html[data-fx=high] .poster.frm .frmi::after{top:0;bottom:0;left:-60%;width:38%;background:rgba(255,255,255,.17);transform:skewX(-18deg);animation:frmShine 6s ease-in-out infinite}
+html[data-fx=high] .poster.frm:nth-child(3n+2) .frmi::after{animation-delay:-2s}
+html[data-fx=high] .poster.frm:nth-child(3n) .frmi::after{animation-delay:-4s}
+@keyframes frmShine{0%,62%{left:-60%}100%{left:130%}}
+html[data-fx=high] .poster.frm::before{animation:frmDrift 10s ease-in-out infinite alternate}
+@keyframes frmDrift{from{transform:scale(1) translate(0,0)}to{transform:scale(1.1) translate(3%,-2%)}}
+html[data-fx=high] .poster .nwb{animation:nwbPulse 2.6s ease-in-out infinite}
+@keyframes nwbPulse{0%,100%{box-shadow:0 0 0 0 rgba(var(--glow),.55)}60%{box-shadow:0 0 0 7px rgba(var(--glow),0)}}
+@media(prefers-reduced-motion:reduce){html[data-fx=high] .poster.frm .frmi::before,html[data-fx=high] .poster.frm .frmi::after,html[data-fx=high] .poster.frm::before,html[data-fx=high] .poster .nwb{animation:none}}
+</style>
+<style id="nm-frm2">
+/* HIGH: efek yang diambil dari gambar poster itu sendiri (warna dominan -> glow, bloom, latar), lebih terasa */
+html[data-fx=high] .poster.frm{--dc:var(--glow)}
+html[data-fx=high] .poster.frm.vis{animation:pop .55s cubic-bezier(.2,.9,.3,1.3) backwards,frmBloom 4.2s ease-in-out infinite}
+html[data-fx=high] .poster.frm.vis:hover{animation:pop .55s cubic-bezier(.2,.9,.3,1.3) backwards,frmBloomH 1.9s ease-in-out infinite}
+@keyframes frmBloom{0%,100%{box-shadow:0 10px 26px rgba(0,0,0,.4),0 0 18px 0 rgba(var(--dc),.35)}50%{box-shadow:0 12px 30px rgba(0,0,0,.45),0 0 46px 8px rgba(var(--dc),.7)}}
+@keyframes frmBloomH{0%,100%{box-shadow:0 22px 40px rgba(0,0,0,.55),0 0 56px 10px rgba(var(--dc),.7)}50%{box-shadow:0 26px 46px rgba(0,0,0,.6),0 0 90px 22px rgba(var(--dc),.95)}}
+html[data-fx=high] .poster.frm::before{filter:blur(14px) brightness(.72) saturate(1.9)}
+html[data-fx=high] .poster.frm .frmi{box-shadow:0 8px 34px rgba(var(--dc),.65)}
+html[data-fx=high] .poster.frm .frmi::before{animation:frmKB 9s ease-in-out infinite alternate}
+@keyframes frmKB{from{transform:scale(1) translate(0,0)}to{transform:scale(1.24) translate(-4%,3%)}}
+html[data-fx=high] .poster.frm:hover .frmi{transform:translate(calc(var(--tx)*-14px),calc(var(--ty)*-9px)) scale(1.12)}
+html[data-fx=high] .poster.frm:not(.vis) .frmi::before,html[data-fx=high] .poster.frm:not(.vis) .frmi::after,html[data-fx=high] .poster.frm:not(.vis)::before{animation-play-state:paused}
+@media(prefers-reduced-motion:reduce){html[data-fx=high] .poster.frm.vis,html[data-fx=high] .poster.frm.vis:hover{animation:none}}
+</style>
+<script id="nm-frm-js">
+/* ambil warna dominan dari gambar di dalam poster, aktif hanya saat poster terlihat di layar (High) */
+(function () {
+    if (!('IntersectionObserver' in window)) return;
+    var root = document.documentElement, cache = {}, t = 0;
+    function dom(u) {
+        return new Promise(function (ok) {
+            var i = new Image(); i.crossOrigin = 'anonymous';
+            i.onerror = function () { ok(''); };
+            i.onload = function () {
+                try {
+                    var c = document.createElement('canvas'); c.width = c.height = 16;
+                    var x = c.getContext('2d', { willReadFrequently: true }); x.drawImage(i, 0, 0, 16, 16);
+                    var d = x.getImageData(0, 0, 16, 16).data, R = 0, G = 0, B = 0, W = 0, k;
+                    for (k = 0; k < d.length; k += 4) {
+                        var r = d[k], g = d[k + 1], b = d[k + 2], mx = Math.max(r, g, b), mn = Math.min(r, g, b), sat = mx ? (mx - mn) / mx : 0, w = .15 + sat * sat * 3 + mx / 255 * .5;
+                        R += r * w; G += g * w; B += b * w; W += w;
+                    }
+                    R /= W; G /= W; B /= W;
+                    var f = Math.min(2.2, 230 / (Math.max(R, G, B) || 1));
+                    ok([R, G, B].map(function (v) { return Math.min(255, Math.round(v * f)); }).join(','));
+                } catch (e) { ok(''); }
+            };
+            i.src = u;
+        });
+    }
+    function paint(p) {
+        var m = /url\(["']?(.*?)["']?\)/.exec(p.style.getPropertyValue('--f') || '');
+        if (!m) return;
+        var u = m[1];
+        (cache[u] !== undefined ? Promise.resolve(cache[u]) : dom(u).then(function (c) { return cache[u] = c; }))
+            .then(function (c) { if (c) p.style.setProperty('--dc', c); });
+    }
+    var io = new IntersectionObserver(function (es) {
+        es.forEach(function (e) {
+            var p = e.target; p.classList.toggle('vis', e.isIntersecting);
+            if (e.isIntersecting && !p.dataset.dc) { p.dataset.dc = 1; paint(p); }
+        });
+    }, { rootMargin: '80px' });
+    function scan() {
+        if (root.dataset.fx !== 'high') return;
+        document.querySelectorAll('.poster.frm:not([data-ob])').forEach(function (p) { p.dataset.ob = 1; io.observe(p); });
+    }
+    function later() { clearTimeout(t); t = setTimeout(scan, 200); }
+    new MutationObserver(later).observe(document.body || root, { childList: true, subtree: true });
+    new MutationObserver(later).observe(root, { attributes: true, attributeFilter: ['data-fx'] });
+    scan();
+})();
 </script>
 </body>
 </html>
