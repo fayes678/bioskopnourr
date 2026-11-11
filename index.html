@@ -5899,6 +5899,17 @@ function jqLadder(list, on) {
     return out.sort(asc);
 }
 
+// kategori otomatis: field kategori di JSON > petunjuk di link (folder film/anime) > jumlah episode
+function jqCategory(g, series) {
+    const hint = String(g.hint || '').toLowerCase();
+    if (/anime|donghua|aniplay/.test(hint)) return 'anime';
+    if (/film|movie|bioskop/.test(hint)) return 'film';
+    const path = g.urls.map(u => { try { return decodeURIComponent(new URL(u).pathname); } catch (e) { return u; } }).join(' ').toLowerCase();
+    if (/\/(anime|donghua)/.test(path)) return 'anime';
+    if (/\/(film|movie|movies)\d*(\/|$)/.test(path)) return 'film';
+    return series ? 'anime' : 'film';
+}
+
 function jqBuild(records, o) {
     const groups = new Map();
     records.forEach(x => {
@@ -5910,7 +5921,9 @@ function jqBuild(records, o) {
         const raw = String(an.nama_anime || x.anime_title || x.nama_anime || '').trim() || guessTitle(src.find(s => okUrl(s.url)).url);
         const key = x.anime_id != null ? 'id:' + x.anime_id : 'n:' + raw.toLowerCase();
         let g = groups.get(key);
-        if (!g) groups.set(key, g = { raw, cover: okUrl(an.gambar_anime) ? String(an.gambar_anime).trim() : null, eps: [] });
+        if (!g) groups.set(key, g = { raw, cover: okUrl(an.gambar_anime) ? String(an.gambar_anime).trim() : null, eps: [], urls: [], hint: '' });
+        g.urls.push(...src.map(q => String(q.url || '')).filter(okUrl));
+        g.hint = g.hint || x.category || x.kategori || an.category || an.kategori || an.tipe || an.type || '';
         const th = x.thumbnail_episode;
         g.eps.push({
             season: 1,
@@ -5925,7 +5938,7 @@ function jqBuild(records, o) {
         const eps = g.eps.filter(e => { const k = e.season + '-' + e.number; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => a.number - b.number);
         const series = eps.length > 1, sp = splitTitle(g.raw);
         return {
-            title: sp.title, guessed: false, year: sp.year, genre: null, category: o.category || null,
+            title: sp.title, guessed: false, year: sp.year, genre: null, category: jqCategory(g, series),
             type: series ? 'series' : 'movie', description: null,
             sources: series ? [] : eps[0].sources, episodes: series ? eps : [], _eps: eps,
             thumbnail_url: series ? (g.cover || eps[0].thumb) : (eps[0].thumb || g.cover),
@@ -5952,7 +5965,7 @@ async function jqAppend(ex, r) {
 }
 
 const jqOn = id => { const s = $(id); return !s || s.classList.contains('on'); };
-const jqOpts = () => ({ tmdb: jqOn('#jq_tm'), ladder: jqOn('#jq_lad'), category: ($('#jq_cat') || {}).value || null });
+const jqOpts = () => ({ tmdb: jqOn('#jq_tm'), ladder: jqOn('#jq_lad') });
 const jqNames = a => a.slice(0, 5).join(', ') + (a.length > 5 ? '…' : '');
 
 // items: [{name, json, qid}]
@@ -6064,8 +6077,7 @@ async function jqLoad() {
 
 const jqSw = (id, t, s, on = true) => `<div class="srow"><span>${t}<small>${s}</small></span><button class="sw ${on ? 'on' : ''}" id="${id}" role="switch" aria-checked="${on}" onclick="this.classList.toggle('on');this.setAttribute('aria-checked',this.classList.contains('on'))"></button></div>`;
 
-const jqTab = () => `<div class="glass pad"><b>Upload JSON film</b><p class="hint">Pilih satu atau beberapa file .json. Nama, thumbnail, link film, dan resolusi diambil otomatis, lalu file JSON dihapus setelah filmnya masuk. Tab Tambah dan Episode manual tetap ada.</p><input id="jq_f" type="file" accept=".json,application/json" multiple onchange="jqPick(this)"><div id="jq_sel"></div>
-<label class="fld"><span>Kategori</span><select id="jq_cat"><option value="film">Film</option><option value="anime">Anime</option><option value="">Kosong</option></select></label>
+const jqTab = () => `<div class="glass pad"><b>Upload JSON film</b><p class="hint">Pilih satu atau beberapa file .json. Nama, thumbnail, link film, resolusi, dan kategori diambil otomatis, lalu file JSON dihapus setelah filmnya masuk. Tab Tambah dan Episode manual tetap ada.</p><input id="jq_f" type="file" accept=".json,application/json" multiple onchange="jqPick(this)"><div id="jq_sel"></div>
 ${jqSw('jq_lad', 'Resolusi otomatis', '144p, 240p, 540p, 720p sampai resolusi tertinggi di JSON')}
 ${jqSw('jq_tm', 'Lengkapi dari TMDB', 'Sinopsis, genre, dan tahun diisi otomatis. Thumbnail dari JSON tidak diganti')}
 <button class="btn glow" style="width:100%" onclick="jqRun()">Upload dan proses</button></div>
