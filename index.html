@@ -1781,6 +1781,17 @@ html:not([data-fx=high]) .bg,html:not([data-fx=high]) .beam,html:not([data-fx=hi
 
 .tag{background:var(--bl)!important;box-shadow:none!important}
 /* rating */
+.poster.frm{background-image:linear-gradient(155deg,var(--bg2),var(--ac) 260%)}
+.poster.frm::before{content:'';position:absolute;inset:-12%;background:var(--f) center/cover;filter:blur(16px) brightness(.55) saturate(1.2)}
+.poster.frm .frmi{position:absolute;left:0;right:0;top:26%;aspect-ratio:16/9;background:var(--f) center/cover;box-shadow:0 8px 24px rgba(0,0,0,.45);z-index:1}
+.poster.frm .tag,.poster.frm .nwb,.poster.frm .rt,.poster.frm span{z-index:2}
+.rw{position:relative}
+.rw-b{position:absolute;top:calc(50% - 26px);z-index:4;width:40px;height:40px;border-radius:50%;border:1px solid var(--bd);background:var(--bg2);color:var(--tx);display:none;place-items:center;cursor:pointer;opacity:0;transition:opacity .2s,transform .2s;box-shadow:var(--sh);padding:0}
+.rw-b svg{width:20px;height:20px}
+.rw-b.l{left:-10px}
+.rw-b.r{right:-10px}
+.rw-b[hidden]{display:none!important}
+@media (hover:hover) and (pointer:fine){.rw-b{display:grid}.rw:hover .rw-b,.rw-b:focus-visible{opacity:1}.rw-b:hover{transform:scale(1.1);background:var(--ac);color:#14101f}}
 .nwb{position:absolute;top:8px;left:8px;z-index:2;font-style:normal;font:800 .62rem var(--font);letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--ac);color:#14101f;box-shadow:0 2px 8px rgba(0,0,0,.35)}
 .tag + .nwb{top:30px}
 .rt{position:absolute;top:8px;right:8px;z-index:2;font-style:normal;font:700 .68rem var(--font);padding:3px 8px;border-radius:99px;background:var(--y);color:#14101f}
@@ -3713,7 +3724,7 @@ async function go(t) {
     window.scrollTo({ top: 0 });
 }
 
-const bg = u => u ? `style="background-image:url('${esc(u)}')"` : '';
+const bg = u => u ? `style="background-image:url('${esc(u)}')"` : 'style="background-image:linear-gradient(155deg,var(--bg2),var(--ac) 260%)"';
 const sm = (u, w = 'w185') => u ? String(u).replace(/(image\.tmdb\.org\/t\/p\/)(?:w\d+|original)\//, '$1' + w + '/') : u;
 
 let ratings = {}, myR = {}, vcount = {};
@@ -3722,7 +3733,8 @@ const rtBadge = id => ratings[id] ? `<em class="rt">★ ${ratings[id].avg}</em>`
 // label "Baru" otomatis untuk film / series yang diupload dalam 7 hari terakhir
 const isNewTitle = t => { const d = Date.parse(t.created_at); return !isNaN(d) && Date.now() - d < 7 * 864e5 && d < Date.now() + 864e5; };
 
-const poster = t => `<div class="poster" data-id="${t.id}" ${bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${t.type === 'series' ? '<em class="tag">Series</em>' : ''}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
+const isFrame = u => /#frame$/.test(u || '');
+const poster = t => `<div class="poster${isFrame(t.thumbnail_url) ? ' frm' : ''}" data-id="${t.id}" ${isFrame(t.thumbnail_url) ? `style="--f:url('${esc(String(t.thumbnail_url).replace(/#frame$/, ''))}')"` : bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${isFrame(t.thumbnail_url) ? '<i class="frmi"></i>' : ''}${t.type === 'series' ? '<em class="tag">Series</em>' : ''}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
 
 const empty = m => `<div class="empty"><img class="eimg" src="img/chick.png" alt="">${m}</div>`;
 
@@ -5656,26 +5668,39 @@ const isDup = (list, r) => list.some(t => t.title.toLowerCase() === r.title.toLo
 // ---- TMDB (poster otomatis) ----
 const normStr = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
 
+const tmdbNames = r => [r.title, ...(r.alts || [])].filter(Boolean);
+const jac = (a, b) => { const x = new Set(a.split(' ').filter(Boolean)), y = new Set(b.split(' ').filter(Boolean)); if (!x.size || !y.size) return 0; let i = 0; x.forEach(w => { if (y.has(w)) i++; }); return i / (x.size + y.size - i); };
+
 function bestMatch(list, r) {
-    const q = normStr(tmdbQuery(r.title)), want = r.type === 'series' ? 'tv' : 'movie';
+    const qs = tmdbNames(r).map(n => normStr(tmdbQuery(n))), want = r.type === 'series' ? 'tv' : 'movie';
     let best = null, bs = 0;
     (list || []).forEach(m => {
-        const ty = m.media_type === want, yr = !!(r.year && +m.year === r.year), eq = normStr(m.title) === q;
-        const s = (ty ? 4 : 0) + (yr ? 3 : (r.year && Math.abs(+m.year - r.year) === 1 ? 1 : 0)) + (eq ? 2 : 0) + (m.poster ? 1 : 0);
-        if ((ty || yr || eq) && s > bs) { best = m; bs = s; }
+        const mt = normStr(m.title), ty = m.media_type === want, yr = !!(r.year && +m.year === r.year), eq = qs.includes(mt);
+        const sim = Math.max(0, ...qs.map(q => jac(q, mt)));
+        const s = (ty ? 4 : 0) + (yr ? 3 : (r.year && Math.abs(+m.year - r.year) === 1 ? 1 : 0)) + (eq ? 3 : 0) + sim * 3 + (m.poster ? 3 : 0);
+        if ((eq || sim >= .25 || (yr && ty)) && (ty || yr || eq) && s > bs) { best = m; bs = s; }
     });
     return best;
 }
 
+// variasi judul: apa adanya, "&" jadi "and", tanpa subjudul setelah ":" / "-", tanpa tanda baca
+const tmdbVariants = t => {
+    const b = tmdbQuery(t);
+    return [...new Set([b, b.replace(/&/g, ' and '), b.split(/\s*[:\-–]\s*/)[0], b.replace(/[^\p{L}\p{N}\s]/gu, ' ')].map(x => x.replace(/\s+/g, ' ').trim()).filter(x => x.length >= 2))];
+};
+
 async function tmdbFind(r) {
-    const q = tmdbQuery(r.title);
-    if (q.length < 2) return null;
-    for (let a = 0; a < 2; a++) {
-        try {
-            const { data, error } = await sb.functions.invoke('hub', { body: { action: 'tmdb', q } });
-            if (error || !data || data.error) throw new Error('tmdb');
-            return bestMatch(data.results, r);
-        } catch (e) { await new Promise(res => setTimeout(res, 600)); }
+    const qs = [...new Set(tmdbNames(r).flatMap(tmdbVariants))];
+    for (const q of qs) {
+        for (let a = 0; a < 2; a++) {
+            try {
+                const { data, error } = await sb.functions.invoke('hub', { body: { action: 'tmdb', q } });
+                if (error || !data || data.error) throw new Error('tmdb');
+                const m = bestMatch(data.results, r);
+                if (m) return m;
+                break;
+            } catch (e) { await new Promise(res => setTimeout(res, 600)); }
+        }
     }
     return null;
 }
@@ -5933,6 +5958,17 @@ function jqLadder(list, on) {
     return out.sort(asc);
 }
 
+// nama folder di link (".../Deadpool-Wolverine-2024/xxx.mp4") = nama alternatif + tahun untuk pencarian poster
+function jqFolder(u) {
+    try {
+        const seg = decodeURIComponent(new URL(u).pathname).split('/').filter(Boolean);
+        const f = (seg.length > 1 ? seg[seg.length - 2] : '').replace(/[._-]+/g, ' ').trim();
+        const y = (f.match(/\b(19|20)\d{2}\b/) || [])[0];
+        const name = f.replace(/\b(19|20)\d{2}\b/g, '').replace(/\b(film|movie|anime|series)\d*\b/gi, '').replace(/\s+/g, ' ').trim();
+        return { name: name.length >= 3 ? name : '', year: y ? +y : null };
+    } catch (e) { return { name: '', year: null }; }
+}
+
 // kategori otomatis: field kategori di JSON > petunjuk di link (folder film/anime) > jumlah episode
 function jqCategory(g, series) {
     const hint = String(g.hint || '').toLowerCase();
@@ -5972,11 +6008,13 @@ function jqBuild(records, o) {
         const eps = g.eps.filter(e => { const k = e.season + '-' + e.number; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => a.number - b.number);
         const series = eps.length > 1, sp = splitTitle(g.raw);
         return {
-            title: sp.title, guessed: false, year: sp.year, genre: null, category: jqCategory(g, series),
+            title: sp.title, guessed: false, year: sp.year || jqFolder(g.urls[0]).year, genre: null, category: jqCategory(g, series),
             type: series ? 'series' : 'movie', description: null,
             sources: series ? [] : eps[0].sources, episodes: series ? eps : [], _eps: eps,
-            thumbnail_url: series ? (g.cover || eps[0].thumb) : (eps[0].thumb || g.cover),
-            fallbackThumb: null, tmdb_id: null, created_at: null,
+            thumbnail_url: g.cover || (o.tmdb === false && eps[0].thumb ? eps[0].thumb + '#frame' : null), // frame video bukan poster: dipakai hanya bila TMDB tidak menemukan
+            fallbackThumb: g.cover ? null : (eps[0].thumb ? eps[0].thumb + '#frame' : null),
+            alts: (() => { const f = jqFolder(g.urls[0]); return f.name && f.name.toLowerCase() !== sp.title.toLowerCase() ? [f.name] : []; })(),
+            tmdb_id: null, created_at: null,
             video_url: series ? null : pickSrc({ sources: eps[0].sources }, 1080).url
         };
     });
@@ -6115,9 +6153,138 @@ const jqTab = () => `<div class="glass pad"><b>Upload JSON film</b><p class="hin
 ${jqSw('jq_lad', 'Resolusi otomatis', '144p, 240p, 540p, 720p sampai resolusi tertinggi di JSON')}
 ${jqSw('jq_tm', 'Lengkapi dari TMDB', 'Sinopsis, genre, dan tahun diisi otomatis. Thumbnail dari JSON tidak diganti')}
 <button class="btn glow" style="width:100%" onclick="jqRun()">Upload dan proses</button></div>
+<div class="glass pad"><b>Perbaiki thumbnail</b><p class="hint">Memeriksa semua judul. Poster kosong, rusak, atau berupa screenshot video diganti poster asli dari TMDB.</p><button class="btn ghost" style="width:100%" onclick="fixThumbs()">Periksa dan perbaiki</button></div>
 <div class="glass pad" id="imp_prog" hidden></div>
 ${impReport ? `<div class="glass pad"><b>Hasil terakhir</b><p class="hint" style="white-space:pre-line">${esc(impReport)}</p></div>` : ''}
 <div class="glass pad"><b>Antrean JSON</b><div id="jq_list"><p class="hint">Memuat…</p></div></div>`;
+
+// ===== thumbnail pintar: poster rusak / screenshot video diganti poster TMDB =====
+const TH_FALLBACK = 'linear-gradient(155deg,var(--bg2),var(--ac) 260%)';
+const thMemo = new Map(), thHeal = new Set();
+const thAdmin = () => typeof me !== 'undefined' && me && me.role === 'admin';
+
+// 'bad' kalau gambar gagal dimuat atau berbentuk lanskap (frame video), 'ok' selain itu
+function thProbe(url) {
+    if (!url || /image\.tmdb\.org/.test(url) || isFrame(url)) return Promise.resolve('ok');
+    if (thMemo.has(url)) return thMemo.get(url);
+    const p = new Promise(res => {
+        const im = new Image();
+        let done = false;
+        const end = v => { if (!done) { done = true; res(v); } };
+        im.onload = () => end(im.naturalWidth > im.naturalHeight * 1.1 ? 'bad' : 'ok');
+        im.onerror = () => end('bad');
+        setTimeout(() => end('ok'), 10000);
+        im.src = url;
+    });
+    thMemo.set(url, p);
+    return p;
+}
+
+const thUrl = m => m.poster.replace('/w342/', '/w500/');
+
+async function thHealOne(t) {
+    if (thHeal.has(t.id)) return;
+    thHeal.add(t.id);
+    const m = await tmdbFind({ title: t.title, year: t.year, type: t.type }).catch(() => null);
+    if (!m || !m.poster) return;
+    const url = thUrl(m);
+    const { error } = await sb.from('titles').update({ thumbnail_url: url, tmdb_id: t.tmdb_id || m.id }).eq('id', t.id);
+    if (error) return;
+    t.thumbnail_url = url;
+    document.querySelectorAll(`.poster[data-id="${t.id}"]`).forEach(el => { el.classList.remove('noimg', 'frm'); el.querySelectorAll('.frmi').forEach(i => i.remove()); el.style.backgroundImage = `url('${sm(url)}')`; delete el.dataset.bad; });
+}
+
+function thCheck(el) {
+    if (el.dataset.pg) return;
+    el.dataset.pg = '1';
+    const t = titles.find(x => x.id == el.dataset.id);
+    const m = /url\(["']?(.+?)["']?\)/.exec(el.style.backgroundImage || '');
+    if (!m) { if (t && thAdmin() && (!t.thumbnail_url || isFrame(t.thumbnail_url))) thHealOne(t); return; }
+    thProbe(m[1]).then(r => {
+        if (r !== 'bad') return;
+        el.style.backgroundImage = TH_FALLBACK;
+        el.classList.add('noimg');
+        el.dataset.bad = '1';
+        if (t && thAdmin()) thHealOne(t);
+    });
+}
+
+// perbaiki semua judul sekaligus (tombol di tab Upload JSON)
+async function fixThumbs() {
+    if (jqBusy) return;
+    if (!titles.length) return toast('Katalog masih kosong');
+    jqBusy = true;
+    impBack = 'jq';
+    impPre = '';
+    try {
+        let n = 0;
+        const bad = [];
+        await pool(titles, 6, async t => {
+            if (!t.thumbnail_url || isFrame(t.thumbnail_url) || (await thProbe(t.thumbnail_url)) === 'bad') bad.push(t);
+            prog(++n / titles.length * .4, `Memeriksa thumbnail ${n}/${titles.length}`);
+        });
+        if (!bad.length) { impOk = true; return await finishImport('Semua thumbnail sudah benar.'); }
+        let ok = 0, k = 0;
+        const miss = [];
+        await pool(bad, 3, async t => {
+            const m = await tmdbFind({ title: t.title, year: t.year, type: t.type }).catch(() => null);
+            let done = false;
+            if (m && m.poster) {
+                const { error } = await sb.from('titles').update({ thumbnail_url: thUrl(m), tmdb_id: t.tmdb_id || m.id }).eq('id', t.id);
+                done = !error;
+            }
+            if (done) ok++; else miss.push(t.title);
+            prog(.4 + (++k / bad.length) * .6, `Mencari poster ${k}/${bad.length} · ${t.title}`);
+        });
+        impOk = true;
+        return await finishImport(`${ok} dari ${bad.length} thumbnail diperbaiki dengan poster TMDB${miss.length ? `\nBelum ketemu di TMDB (tetap tampil sebagai kartu frame, bisa diisi manual): ${jqNames(miss)}` : ''}`);
+    } catch (e) {
+        return finishImport('Gagal memperbaiki thumbnail: ' + (e.message || e));
+    } finally {
+        jqBusy = false;
+    }
+}
+
+// ===== panah geser untuk baris poster (PC / laptop) =====
+function rwInit(row) {
+    if (row.dataset.rw) return;
+    row.dataset.rw = '1';
+    const w = document.createElement('div');
+    w.className = 'rw';
+    row.parentNode.insertBefore(w, row);
+    w.appendChild(row);
+    const mk = d => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'rw-b ' + (d < 0 ? 'l' : 'r');
+        b.setAttribute('aria-label', d < 0 ? 'Geser ke kiri' : 'Geser ke kanan');
+        b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="${d < 0 ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'}"/></svg>`;
+        b.onclick = () => row.scrollBy({ left: d * Math.max(200, row.clientWidth * .85), behavior: 'smooth' });
+        return b;
+    };
+    const L = mk(-1), R = mk(1);
+    w.append(L, R);
+    const upd = row._upd = () => {
+        L.hidden = row.scrollLeft < 8;
+        R.hidden = row.scrollLeft + row.clientWidth >= row.scrollWidth - 8;
+    };
+    row.addEventListener('scroll', upd, { passive: true });
+    addEventListener('resize', upd);
+    upd();
+}
+
+(() => {
+    let q = false;
+    const scan = () => {
+        q = false;
+        document.querySelectorAll('.row:not([data-rw])').forEach(rwInit);
+        document.querySelectorAll('.row[data-rw]').forEach(r => r._upd && r._upd());
+        document.querySelectorAll('.poster[data-id]:not([data-pg])').forEach(thCheck);
+    };
+    const kick = () => { if (!q) { q = true; setTimeout(scan, 150); } };
+    const start = () => { new MutationObserver(kick).observe(document.body, { childList: true, subtree: true }); kick(); };
+    document.body ? start() : addEventListener('DOMContentLoaded', start);
+})();
 
 async function addEp() {
     try {
