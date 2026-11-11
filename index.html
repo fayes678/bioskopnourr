@@ -3893,15 +3893,23 @@ function loadSrc(v, url, at) {
             if (!Hls.isSupported()) return toast('Browser ini belum mendukung stream m3u8');
             let fails = 0;
             const h = hlsI = new Hls({
-                maxBufferLength: LOW ? 12 : 30,
-                maxMaxBufferLength: LOW ? 24 : 60,
-                maxBufferSize: (LOW ? 16 : 40) * 1e6,
+                maxBufferLength: LOW ? 20 : 50,
+                maxMaxBufferLength: LOW ? 40 : 120,
+                maxBufferSize: (LOW ? 24 : 80) * 1e6,
+                maxBufferHole: .6,
+                nudgeMaxRetry: 8,
                 backBufferLength: LOW ? 8 : 30,
                 capLevelToPlayerSize: true,
                 lowLatencyMode: false,
-                fragLoadingMaxRetry: 6,
-                manifestLoadingMaxRetry: 4,
-                levelLoadingMaxRetry: 4,
+                enableWorker: true,
+                startFragPrefetch: true,
+                abrEwmaDefaultEstimate: 2e6,
+                fragLoadingTimeOut: 30000,
+                fragLoadingMaxRetry: 8,
+                fragLoadingRetryDelay: 800,
+                fragLoadingMaxRetryTimeout: 8000,
+                manifestLoadingMaxRetry: 5,
+                levelLoadingMaxRetry: 5,
                 startPosition: at > 0 ? at : -1
             });
             h.loadSource(url);
@@ -3915,7 +3923,22 @@ function loadSrc(v, url, at) {
             });
         }).catch(() => toast('Pemutar HLS gagal dimuat, cek koneksi'));
     } else {
-        v.src = url;
+        if (v._errH) v.removeEventListener('error', v._errH);
+        v._retry = 0;
+        v._errH = () => {
+            const e = v.error;
+            if (v._u !== url || !v.isConnected || v._closed || !e || e.code === 4 || v._retry >= 4) return;
+            const n = ++v._retry, pos = v.currentTime || at || 0, was = !v.paused;
+            setTimeout(() => {
+                if (v._u !== url || !v.isConnected || v._closed) return;
+                v.src = String(url).replace(/#q\d+p$/, '');
+                v.addEventListener('loadedmetadata', () => { if (pos > 0) v.currentTime = pos; v.play().catch(() => { }); }, { once: true });
+                v.load();
+            }, 700 * n);
+        };
+        v.addEventListener('error', v._errH);
+        v.preload = 'auto';
+        v.src = String(url).replace(/#q\d+p$/, ''); // #qXXXp hanya penanda pilihan kualitas, tidak dikirim ke server
         if (at > 0) v.addEventListener('loadedmetadata', () => { v.currentTime = at; }, { once: true });
         v.load();
     }
@@ -3924,7 +3947,13 @@ function loadSrc(v, url, at) {
 // pengawas macet: lompati celah buffer, pulihkan, lalu muat ulang di posisi yang sama
 function watchdog(v) {
     clearInterval(wd);
-    let last = -1, n = 0;
+    let last = -1, n = 0, reloads = [];
+    addEventListener('online', () => {
+        if (!v.isConnected || v._closed || v.paused || v.readyState >= 3) return;
+        const at = v.currentTime, u = v._u;
+        loadSrc(v, u, at);
+        v.addEventListener('loadedmetadata', () => v.play().catch(() => { }), { once: true });
+    });
     wd = setInterval(() => {
         if (!v.isConnected) return clearInterval(wd);
         if (v.paused || v.ended || v.seeking || document.hidden || Math.abs(v.currentTime - last) > .05) { n = 0; last = v.currentTime; return; }
@@ -3937,6 +3966,9 @@ function watchdog(v) {
             if (hlsI) hlsI.recoverMediaError();
         } else {
             n = 0;
+            reloads = reloads.filter(x => Date.now() - x < 60000);
+            if (reloads.length >= 4) { toast('Koneksi lambat. Coba turunkan kualitas atau cek internet'); return; }
+            reloads.push(Date.now());
             const at = v.currentTime, u = v._u, was = suppress;
             suppress = true;
             const rel = () => { suppress = was; };
@@ -3945,7 +3977,7 @@ function watchdog(v) {
             v.addEventListener('loadedmetadata', () => { v.play().catch(() => { }); setTimeout(rel, 800); }, { once: true });
             setTimeout(rel, 10000);
         }
-    }, 4000);
+    }, 2000);
 }
 
 
@@ -4023,7 +4055,7 @@ const ensureNmpSprite = () => { if (!document.getElementById('np-sprite')) docum
 // semua listener dibersihkan lewat destroy() saat film ditutup / kembali ke detail.
 // ======================================================================
 const nmpHtml = (url, poster) => `<div class="nmp" id="nmp" data-playing="0">
-<video id="vid" data-src="${esc(url)}" playsinline webkit-playsinline autopictureinpicture x-webkit-airplay="allow" preload="metadata"></video>
+<video id="vid" data-src="${esc(url)}" playsinline webkit-playsinline autopictureinpicture x-webkit-airplay="allow" preload="auto"></video>
 <div class="np-dim"></div>
 <div class="np-poster"${poster ? ` style="background-image:url('${esc(poster)}')"` : ''}></div>
 <div class="np-spin"></div><div class="np-hud"></div>
@@ -4526,6 +4558,8 @@ ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas
         const setRes = (url, r) => {
             if (url === curUrl) return;
             if (r) localStorage.nm_res = r;
+            const baseU = x => String(x || '').replace(/#q\d+p$/, '');
+            if (baseU(url) === baseU(curUrl)) { curUrl = url; vv._u = url; drawRes(); np && np.refresh(false); return; }
             const was = !vv.paused, at = vv.currentTime;
             suppress = true; // jangan kirim pause/seek ke room saat ganti kualitas
             curUrl = url;
