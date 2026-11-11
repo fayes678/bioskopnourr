@@ -1901,7 +1901,7 @@ main{animation:var(--enter) .45s both}
 .msg.me .bub{background:var(--ac);color:#14101f;box-shadow:none}
 
 /* ===== halaman film layar penuh ===== */
-.film{position:fixed;inset:0;z-index:50;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);animation:var(--enter) .35s both}
+.film{position:fixed;inset:0;z-index:50;overflow-y:auto;overscroll-behavior:contain;background:var(--bg);animation:var(--enter) .35s backwards}
 .fbar{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top)) 12px 8px;background:var(--bg);border-bottom:var(--bw) var(--bs) var(--bd)}
 .fbar .ft{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 1rem var(--font)}
 .fin{max-width:1000px;margin:0 auto;padding:24px 16px 72px;display:grid;gap:24px;grid-template-columns:minmax(0,1fr)}
@@ -1919,7 +1919,11 @@ main{animation:var(--enter) .45s both}
 .btn.big{flex:1 1 220px;min-height:56px;padding:14px 26px;font-size:1.05rem}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 .fvid{background:#000;display:grid;place-items:center}
-.fvid video{width:100%;max-height:78vh;border-radius:0;display:block;background:#000;box-shadow:none}
+.fvid video{width:100%;max-height:78vh;max-height:78dvh;object-fit:contain;border-radius:0;display:block;background:#000;box-shadow:none;transform:none;will-change:auto}
+/* saat film dibuka: matikan semua beban GPU di belakang pemutar (penyebab video beku di iOS) */
+html.vid-open .bg,html.vid-open .beam,html.vid-open .grain,html.vid-open #spot,html.vid-open #fx,html.vid-open #fx2{display:none!important}
+html.vid-open *,html.vid-open *::before,html.vid-open *::after{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html.vid-open .cc-live i,html.vid-open .film *{will-change:auto!important}
 .fpb{max-width:1000px;margin:0 auto;padding:16px 14px 72px;display:grid;gap:10px;align-content:start}
 .ptitle{font:700 1.5rem/1.15 var(--font);color:var(--ac2);margin-top:6px}
 .epn{color:var(--mut);font-weight:600}
@@ -2148,6 +2152,268 @@ html[data-fx=low] #nt,html[data-fx=low] #nt .nc{animation:none}
 .mchips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
 .msql{display:none;margin-top:10px}
 .msql pre{max-height:220px;overflow:auto;padding:10px;border-radius:12px;background:rgba(0,0,0,.35);font-size:.72rem;line-height:1.5;white-space:pre-wrap;user-select:all}
+</style>
+<style id="nmp-css">
+/* ===== pemutar baru (NMP) ===== */
+.fvid.npw{display:block;position:sticky;top:var(--np-top,0);z-index:20;width:100%;aspect-ratio:16/9;max-height:78vh;max-height:78dvh;background:#000;overflow:visible}
+.nmp,.nmp *{box-sizing:border-box}
+.nmp{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:#fff;text-align:left}
+.nmp button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;box-shadow:none;border-radius:0;transform:none;min-height:0;min-width:0;text-shadow:none;-webkit-appearance:none;appearance:none}
+.nmp .np-i{width:24px;height:24px;fill:currentColor;display:block;flex:none}
+.nmp .np-dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;z-index:2}
+.nmp h2{background:none;-webkit-text-fill-color:#fff;color:#fff;animation:none;filter:none;letter-spacing:0}
+.fvid.npw .nmp video{max-height:none;border-radius:0;box-shadow:none!important;width:100%;height:100%}
+.nmp .np-mark.np-on,.nmp .np-markf.np-on{color:#ffd54a}
+.nmp{position:absolute;inset:0;z-index:20;background:#000;width:100%;height:100%;overflow:hidden;user-select:none;-webkit-user-select:none;touch-action:pan-y;--np-chip:rgba(255,255,255,.14);--np-card:var(--bg2,#1a1b21)}
+.nmp.np-fs{position:fixed;inset:0;aspect-ratio:auto;height:100%;z-index:100;touch-action:none}
+.nmp video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;background:#000}
+.nmp video::cue{background:rgba(0,0,0,.65);color:#fff;font-size:1.1em}
+.nmp .np-poster{position:absolute;inset:0;background:#000 center/cover no-repeat;opacity:.9}
+.nmp.np-started .np-poster{display:none}
+.nmp .np-ui{position:absolute;opacity:0;pointer-events:none;transition:opacity .2s;z-index:5}
+.nmp.np-show .np-ui{opacity:1;pointer-events:auto}
+.nmp.np-locked .np-ui:not(.np-lockbtn){display:none}
+.nmp .np-full{display:none}
+.nmp.np-fs .np-full{display:flex}
+.nmp.np-fs .np-mini{display:none}
+.nmp .np-top{left:0;right:0;top:0;display:flex;align-items:center;gap:8px;padding:8px 12px;padding-top:max(8px,env(safe-area-inset-top))}
+.nmp .np-top .np-sp{flex:1}
+.nmp .np-top h2{margin:0;font-size:15px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
+.nmp .np-ib{width:40px;height:40px;display:flex;align-items:center;justify-content:center;border-radius:50%}
+.nmp .np-ib:active{background:rgba(255,255,255,.14)}
+.nmp .np-chip{background:#4a4b52;border-radius:6px;padding:5px 10px;font-size:13px;font-weight:600}
+.nmp .np-qchip{background:rgba(255,255,255,.18);border-radius:16px;padding:6px 12px;font-size:13px;font-weight:700}
+.nmp .np-bat{width:26px;height:12px;border:2px solid #fff;border-radius:3px;position:relative;padding:1px}
+.nmp .np-bat:after{content:"";position:absolute;right:-5px;top:2px;width:2px;height:4px;background:#fff;border-radius:0 1px 1px 0}
+.nmp .np-bat i{display:block;height:100%;background:#fff;width:50%}
+.nmp .np-clock{font-size:14px}
+.nmp .np-mid{left:0;right:0;top:50%;transform:translateY(-50%);display:flex;justify-content:center;align-items:center;gap:clamp(30px,13vmin,90px)}
+.nmp .np-mid .np-ib{width:56px;height:56px}
+.nmp .np-mid .np-ib svg{width:46px;height:46px;filter:drop-shadow(0 1px 3px rgba(0,0,0,.6))}
+.nmp .np-mid .np-big svg{width:60px;height:60px}
+.nmp.np-fs .np-mid .np-ib{width:72px;height:72px}
+.nmp.np-fs .np-mid .np-ib svg{width:58px;height:58px}
+.nmp.np-fs .np-mid .np-big svg{width:76px;height:76px}
+.nmp[data-playing="1"] .np-pa,.nmp:not([data-playing="1"]) .np-pl{display:none!important}
+.nmp.np-fs h2.np-full{display:block}
+.nmp.np-locked .np-vs.np-ui,.nmp.np-locked .np-rside{display:none!important}
+.nmp .np-bot{left:0;right:0;bottom:0;padding:6px 12px 8px;flex-direction:column;gap:2px}
+.nmp:not(.np-fs) .np-bot.np-mini{display:flex;flex-direction:row;align-items:center;gap:10px}
+.nmp.np-fs .np-bot{padding:0 28px max(10px,env(safe-area-inset-bottom))}
+.nmp .np-brow{display:flex;align-items:center;gap:6px;width:100%}
+.nmp .np-brow .np-sp{flex:1}
+.nmp .np-brow .np-txt{font-size:15px;font-weight:700;padding:8px 10px}
+.nmp .np-tm{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.nmp .np-seek{position:relative;flex:1;height:26px;touch-action:none;cursor:pointer}
+.nmp .np-seek:before{content:"";position:absolute;left:0;right:0;top:11px;height:4px;border-radius:2px;background:#555}
+.nmp .np-seek .np-b,.nmp .np-seek .np-f{position:absolute;left:0;top:11px;height:4px;border-radius:2px;width:0}
+.nmp .np-seek .np-b{background:#8a8a92}
+.nmp .np-seek .np-f{background:var(--ac)}
+.nmp .np-seek .np-k{position:absolute;top:6px;left:0;width:14px;height:14px;border-radius:50%;background:var(--ac);margin-left:-7px}
+.nmp .np-seek .np-pv{position:absolute;bottom:26px;transform:translateX(-50%);background:#000c;border-radius:6px;padding:3px 8px;font-size:12px;display:none}
+.nmp .np-seek.np-drag .np-pv{display:block}
+.nmp .np-fsrow{display:flex;align-items:center;gap:10px;width:100%}
+.nmp .np-vs{position:absolute;width:30px;height:clamp(110px,36vh,190px);display:flex;flex-direction:column;align-items:center;gap:10px;top:50%;transform:translateY(-52%);touch-action:none}
+.nmp .np-vs .np-tr{flex:1;width:5px;border-radius:3px;background:#666;position:relative;overflow:hidden;cursor:pointer}
+.nmp .np-vs .np-fl{position:absolute;left:0;right:0;bottom:0;background:#fff;height:50%}
+.nmp .np-vs.np-ui{display:none}
+.nmp.np-fs .np-vs.np-ui{display:flex}
+.nmp .np-vs.np-l{left:16%}
+.nmp .np-vs.np-r{right:16%}
+.nmp .np-lockbtn{left:5%;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:10px;background:#8a8a8ecc;display:none;place-items:center}
+.nmp.np-fs .np-lockbtn{display:grid}
+.nmp .np-rside{right:4%;top:50%;transform:translateY(-50%);flex-direction:column;gap:46px;display:none}
+.nmp.np-fs .np-rside{display:flex}
+.nmp .np-rside .np-ib{width:48px;height:48px}
+.nmp .np-rside .np-ib.np-on{color:#ffd54a}
+.nmp .np-tip{position:absolute;right:calc(4% + 58px);top:34%;background:#5b53c4;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600;z-index:8;max-width:55%;display:none}
+.nmp .np-tip:after{content:"";position:absolute;right:-8px;top:50%;margin-top:-8px;border:8px solid transparent;border-left-color:#5b53c4;border-right:0}
+.nmp .np-tip.np-on{display:block}
+.nmp .np-spin{position:absolute;left:50%;top:50%;width:44px;height:44px;margin:-22px;border:4px solid #fff4;border-top-color:#fff;border-radius:50%;animation:np-sp 0.8s linear infinite;display:none;z-index:4}
+.nmp.np-wait .np-spin{display:block}
+@keyframes np-sp{to{transform:rotate(360deg)}}
+.nmp .np-hud{position:absolute;left:50%;top:18%;transform:translateX(-50%);background:#000b;border-radius:20px;padding:8px 16px;font-size:14px;font-weight:600;z-index:9;display:none;white-space:nowrap}
+.nmp .np-hud.np-on{display:block}
+.nmp .np-err{position:absolute;inset:0;z-index:7;background:#000c;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;text-align:center;padding:20px;font-size:14px}
+.nmp .np-err.np-on{display:flex}
+.nmp .np-btn{background:var(--ac);color:#fff;border-radius:20px;padding:9px 20px;font-weight:700;font-size:14px}
+.nmp .np-btn.np-g{background:var(--np-chip)}
+.nmp .np-nextbox{position:absolute;right:16px;bottom:70px;z-index:8;background:#000d;border-radius:12px;padding:12px 14px;display:none;gap:10px;align-items:center;font-size:14px}
+.nmp .np-nextbox.np-on{display:flex}
+.nmp .np-toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#2b2c33;color:#fff;border-radius:20px;padding:9px 18px;font-size:14px;z-index:300;display:none;max-width:86vw;text-align:center}
+.nmp .np-toast.np-on{display:block}
+.nmp .np-shbg{position:fixed;inset:0;background:#0008;z-index:200;display:none}
+.nmp .np-shbg.np-on{display:block}
+.nmp .np-sheet{position:fixed;z-index:201;background:var(--np-card);left:0;right:0;bottom:0;max-height:72vh;border-radius:16px 16px 0 0;display:none;flex-direction:column;padding-bottom:env(safe-area-inset-bottom)}
+.nmp .np-sheet.np-on{display:flex}
+.nmp.np-fs .np-sheet{left:auto;top:0;width:min(380px,55vw);max-height:none;border-radius:0}
+.nmp .np-sheet h3{margin:0;padding:16px 18px 8px;font-size:16px}
+.nmp .np-shl{overflow:auto;padding:0 8px 12px}
+.nmp .np-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;text-align:left;padding:13px 12px;border-radius:10px;font-size:15px}
+.nmp .np-row:active{background:var(--np-chip)}
+.nmp .np-row small{color:var(--mut);font-size:13px}
+.nmp .np-row.np-on{color:var(--ac2,#f3b6c6);font-weight:700}
+
+
+/* ===== ukuran pemutar: pas di HP & laptop (tidak lagi memenuhi layar) ===== */
+.fvid.npw{display:block;position:sticky;top:var(--np-top,0);z-index:20;width:100%;height:auto;aspect-ratio:auto;max-height:none;background:#000;overflow:visible}
+.fvid.npw .nmp{position:relative;inset:auto;margin:0 auto;height:auto;aspect-ratio:16/9;width:min(100%,1000px,calc(62vh*16/9));width:min(100%,1000px,calc(62dvh*16/9))}
+.fvid.npw .nmp.np-fs{position:fixed;inset:0;margin:0;width:100%;height:100%;aspect-ratio:auto}
+@media(min-width:760px){.fvid.npw .nmp:not(.np-fs){border-radius:0 0 14px 14px}}
+
+/* ===== antarmuka bawah (portrait) ===== */
+.fpb{max-width:760px;margin:0 auto;padding:14px 14px 72px;display:grid;gap:12px;grid-template-columns:minmax(0,1fr);align-content:start}
+.ptabs{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:4px;padding:4px;border:1px solid var(--bd);border-radius:var(--rs,16px);background:rgba(255,255,255,.04)}
+.ptabs button{min-height:44px;border:1px solid transparent;border-radius:calc(var(--rs,16px) - 3px);background:none;color:var(--mut);font:600 .95rem var(--font);cursor:pointer}
+.ptabs button.on{background:rgba(var(--glow),.2);border-color:var(--ac);color:var(--tx);font-weight:700}
+.ppanel{display:grid;gap:12px;align-content:start;min-width:0}
+.pcard{border:1px solid var(--bd);border-radius:var(--r);background:rgba(255,255,255,.04);padding:14px;min-width:0}
+.ph{display:block;font:700 1.05rem var(--font);color:var(--ac2);margin-bottom:10px}
+.pbadge{display:inline-block;padding:5px 12px;border-radius:10px;background:rgba(var(--glow),.22);color:var(--ac2);font:700 .85rem var(--font)}
+.pbadge.sm{padding:4px 10px;font-size:.78rem}
+.pet{font:700 1.3rem/1.2 var(--font);margin:10px 0 8px;overflow-wrap:anywhere}
+.pmeta{display:flex;flex-wrap:wrap;gap:6px 14px;color:var(--mut);font-size:.88rem}
+.pmeta span{display:inline-flex;align-items:center;gap:6px}
+.pmeta .ic{width:16px;height:16px}
+.pmeta .ps{color:var(--y)}
+.pmeta .ps .ic{fill:currentColor}
+.pinfo{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:start}
+.pposter{width:96px;aspect-ratio:2/3;border-radius:12px;background:var(--bg2) center/cover no-repeat;border:1px solid var(--bd)}
+.ptx{min-width:0;display:grid;gap:8px}
+.ptx .ptitle{margin:0;font:700 1.15rem/1.2 var(--font);color:var(--tx);overflow-wrap:anywhere}
+.psyn{margin:0;color:var(--mut);line-height:1.55;font-size:.92rem;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+.psyn.open{display:block;-webkit-line-clamp:unset}
+.plink{justify-self:start;background:none;border:0;padding:0;color:var(--ac2);font:700 .9rem var(--font);cursor:pointer}
+.pchips{display:flex;flex-wrap:wrap;gap:8px}
+.pchips span{padding:5px 13px;border:1px solid var(--bd);border-radius:99px;font-size:.85rem;color:var(--mut)}
+.pacts{padding:6px}
+.pacts .acts{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:0;width:100%}
+.pacts .act{flex-direction:column;gap:6px;min-height:72px;padding:10px 4px;border:0;border-radius:12px;background:none;box-shadow:none;font-size:.85rem}
+.pacts .act+.act{border-left:1px solid var(--bd);border-radius:0}
+.pacts .act .ic{width:24px;height:24px}
+.pacts .act em{position:absolute;margin:-30px 0 0 24px;font-size:.7rem}
+.pacts .act{position:relative}
+.pseas{display:flex;gap:8px;overflow-x:auto;margin-bottom:10px}
+.pseas:empty{display:none}
+.pseas button{flex:none;min-height:38px;padding:0 16px;border:1px solid var(--bd);border-radius:99px;background:none;color:var(--mut);font:600 .88rem var(--font);cursor:pointer}
+.pseas button.on{background:rgba(var(--glow),.2);border-color:var(--ac);color:var(--tx)}
+.pnum{display:flex;flex-wrap:wrap;gap:10px}
+.pnum button{width:52px;height:52px;border:1px solid var(--bd);border-radius:14px;background:rgba(255,255,255,.05);color:var(--tx);font:700 1.1rem var(--font);cursor:pointer}
+.pnum button.on{background:var(--ac);border-color:var(--ac);color:#14101f}
+.pprog .pph{display:flex;align-items:center;gap:10px}
+.pprog .pph b{flex:1;font:700 1.05rem var(--font)}
+.pico{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;background:rgba(var(--glow),.18);color:var(--ac2)}
+.pico .ic{width:20px;height:20px}
+.pbar{height:8px;border-radius:99px;background:rgba(255,255,255,.1);margin:14px 0 10px;overflow:hidden}
+.pbar i{display:block;height:100%;width:0;border-radius:99px;background:var(--ac)}
+.pps{display:flex;justify-content:space-between;color:var(--mut);font-size:.88rem}
+.pps b{color:var(--tx)}
+.fpb .cchat{max-height:none;min-height:420px;height:calc(100dvh - 300px);margin:0}
+@media(min-width:960px){.fpb{max-width:760px;grid-template-columns:minmax(0,1fr)}.fpb>.cchat{grid-column:1;grid-row:auto;position:relative;top:auto}}
+</style>
+<style id="dt-css">
+/* ===== halaman detail judul (sebelum pemutar) ===== */
+.film.st-info .fbar{position:fixed;left:0;right:0;top:0;background:transparent;border-bottom-color:transparent;transition:background-color .2s,border-color .2s}
+.film.st-info .fbar.solid{background:var(--bg);border-bottom-color:var(--bd)}
+.film.st-info .fbar:not(.solid) .ft{opacity:0}
+.fbar .fa{width:42px;height:42px;display:grid;place-items:center;border:0;border-radius:50%;background:rgba(0,0,0,.32);color:var(--tx);cursor:pointer;flex:none}
+.fbar .fa .ic{width:22px;height:22px}
+.fbar .fa.on{color:var(--ac)}
+.fbar .fa.on .ic{fill:currentColor}
+.film.st-info #fback{background:rgba(0,0,0,.32);border-color:transparent}
+
+.dt{max-width:760px;margin:0 auto;padding-bottom:90px}
+.dt-hero{position:relative;overflow:hidden;text-align:center;padding:calc(70px + env(safe-area-inset-top)) 18px 24px;border-radius:0 0 var(--r) var(--r)}
+.dt-bgi{position:absolute;inset:-30px;background:var(--bg2) center/cover no-repeat;filter:blur(28px);transform:scale(1.1);opacity:.6}
+.dt-hero::after{content:"";position:absolute;inset:0;background:var(--bg);opacity:.5}
+.dt-hero>*:not(.dt-bgi){position:relative;z-index:1}
+.dt-poster{width:min(54vw,230px);aspect-ratio:2/3;margin:0 auto 18px;border-radius:var(--r);border:3px solid var(--ac);background:var(--bg2) center/cover no-repeat;box-shadow:var(--sh)}
+.dt-title{font:700 clamp(1.45rem,6vw,2.1rem)/1.12 var(--font);text-transform:uppercase;overflow-wrap:anywhere;margin:0 0 16px;color:var(--tx)}
+.dt-chips{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.dt-chip{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border:var(--bw) var(--bs) var(--bd);border-radius:var(--pill);background:rgba(0,0,0,.3);font:700 .92rem var(--font);color:var(--tx)}
+.dt-chip .ic{width:17px;height:17px}
+.dt-chip.s .ic{fill:var(--y,#ffd54a);color:var(--y,#ffd54a)}
+.dt-chip.st-ongoing{color:var(--ac2)}
+.dt-chip.st-completed{color:var(--mut)}
+
+.dt-card{margin:14px 14px 0;padding:18px;border:var(--bw) var(--bs) var(--bd);border-radius:var(--r);background:rgba(255,255,255,.04)}
+.dt-h{display:block;font:700 1.12rem var(--font);color:var(--tx);margin:0 0 12px}
+.dt-syn{margin:0;color:var(--mut);line-height:1.65;font-size:.98rem;display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.dt-syn.open{display:block}
+.dt-syn.ld{opacity:.7}
+.dt-card .plink{margin-top:8px}
+.dt-cta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:18px}
+.dt-cta .btn.big{flex:none;min-width:0;width:100%;padding:14px 10px;font-size:1rem;display:inline-flex;align-items:center;justify-content:center;gap:8px}
+.dt-cta .btn .ic{width:20px;height:20px;flex:none}
+.dt-cta .btn span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dt-cta .btn.on{background:rgba(var(--glow),.22);border-color:var(--ac);color:var(--tx)}
+.dt-cta .btn.on .ic{fill:currentColor}
+.dt-acts{margin-top:12px}
+.dt-acts .acts{display:flex;gap:8px;flex-wrap:wrap}
+.dt-acts [data-a=like]{display:none}
+
+.dt-bar{height:10px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin:2px 0 10px}
+.dt-bar i{display:block;height:100%;width:0;border-radius:99px;background:var(--ac);transition:width .5s}
+.dt-ps{color:var(--mut);font-size:.95rem}
+.dt-ps b{color:var(--tx)}
+
+.dt-fold{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;padding:0;color:var(--tx);cursor:pointer;text-align:left}
+.dt-fold .dt-h{margin:0}
+.dt-fold .ic{width:22px;height:22px;transition:transform .2s}
+.dt-fold[aria-expanded=false] .ic{transform:rotate(180deg)}
+.dt-rows{display:grid;grid-template-columns:104px minmax(0,1fr);gap:16px 12px;margin:20px 0 0}
+.dt-rows[hidden]{display:none}
+.dt-rows dt{color:var(--mut)}
+.dt-rows dd{margin:0;font-weight:600;overflow-wrap:anywhere}
+.dt-card .plink.dt-edit{margin-top:20px}
+
+.dt-eh{display:flex;align-items:center;gap:10px;margin:28px 14px 12px}
+.dt-eh h2{flex:1;margin:0;padding-left:12px;border-left:4px solid var(--ac);font:700 1.3rem var(--font);color:var(--tx);-webkit-text-fill-color:currentColor}
+.dt-sq,.dt-pillb{height:44px;border:var(--bw) var(--bs) var(--bd);border-radius:var(--rs,14px);background:rgba(255,255,255,.05);color:var(--tx);cursor:pointer;font:700 .95rem var(--font)}
+.dt-sq{width:48px;display:grid;place-items:center}
+.dt-sq .ic{width:22px;height:22px}
+.dt-pillb{padding:0 18px;color:var(--mut)}
+.dt-search{display:flex;align-items:center;gap:12px;margin:0 14px 14px;padding:0 16px;height:52px;border:var(--bw) var(--bs) var(--bd);border-radius:var(--r);background:rgba(255,255,255,.04)}
+.dt-search .ic{width:20px;height:20px;color:var(--ac2);flex:none}
+.dt-search input{flex:1;min-width:0;background:none;border:0;outline:0;font-size:1rem;color:var(--tx);height:100%}
+.dt-seas{display:flex;gap:8px;overflow-x:auto;margin:0 14px 14px}
+.dt-seas:empty{display:none}
+.dt-seas button{flex:none;min-height:38px;padding:0 16px;border:var(--bw) var(--bs) var(--bd);border-radius:99px;background:none;color:var(--mut);font:600 .88rem var(--font);cursor:pointer}
+.dt-seas button.on{background:rgba(var(--glow),.2);border-color:var(--ac);color:var(--tx)}
+
+.dt-eps{display:block}
+.dt-ep{position:relative;display:grid;grid-template-columns:minmax(0,42%) minmax(0,1fr) auto;gap:14px;align-items:center;margin:0 14px 12px;padding:12px;border:var(--bw) var(--bs) var(--bd);border-radius:var(--r);background:rgba(255,255,255,.04);cursor:pointer;text-align:left}
+.dt-ep:focus-visible{outline:2px solid var(--ac2);outline-offset:2px}
+.dt-ep.cur{border-color:var(--ac)}
+.dt-th{position:relative;aspect-ratio:16/9;border-radius:var(--rs,14px);background:var(--bg2) center/cover no-repeat;overflow:hidden}
+.dt-play{position:absolute;left:50%;top:50%;width:42px;height:42px;margin:-21px;border-radius:50%;background:rgba(0,0,0,.5);display:grid;place-items:center;color:#fff}
+.dt-play .ic{width:20px;height:20px;fill:currentColor}
+.dt-b1,.dt-b2{position:absolute;bottom:8px;padding:4px 10px;border-radius:99px;background:rgba(0,0,0,.62);color:#fff;font:700 .78rem var(--font)}
+.dt-b1{left:8px}
+.dt-b2{right:8px}
+.dt-tp{position:absolute;left:0;right:0;bottom:0;height:4px;background:rgba(255,255,255,.2)}
+.dt-tp b{display:block;height:100%;background:var(--ac)}
+.dt-ei{min-width:0;display:grid;gap:6px}
+.dt-en{font:700 1.08rem/1.2 var(--font);color:var(--tx)}
+.dt-en em{font-style:normal;margin-left:8px;padding:2px 8px;border-radius:99px;background:var(--ac);color:#14101f;font-size:.7rem;vertical-align:middle}
+.dt-ea{color:var(--mut);font-size:.85rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dt-es{color:var(--mut);font-size:.92rem}
+.dt-es.done{color:var(--ac2)}
+.dt-dl{width:46px;height:46px;border:0;border-radius:12px;background:rgba(255,255,255,.07);color:var(--mut);display:grid;place-items:center;cursor:pointer}
+.dt-dl .ic{width:22px;height:22px}
+.dt-empty{margin:0 14px;padding:26px 18px;border:var(--bw) dashed var(--bd);border-radius:var(--r);text-align:center;color:var(--mut)}
+.dt-eps.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:0 14px}
+.dt-eps.grid .dt-ep{display:block;margin:0;padding:8px}
+.dt-eps.grid .dt-ei{padding:10px 4px 4px}
+.dt-eps.grid .dt-play{width:36px;height:36px;margin:-18px}
+.dt-eps.grid .dt-dl{position:absolute;top:14px;right:14px;width:36px;height:36px;background:rgba(0,0,0,.55);color:#fff;z-index:2}
+.dt-eps.grid .dt-b1{left:6px;bottom:10px}
+.dt-eps.grid .dt-b2{right:6px;bottom:10px}
+@media(min-width:760px){.dt-eps.grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.dt-fld{display:grid;gap:6px;margin-bottom:12px}
+.dt-fld label{font:600 .85rem var(--font);color:var(--mut)}
+.pnum button.done:not(.on){color:var(--ac2);border-color:var(--ac2)}
+@media(prefers-reduced-motion:reduce){.dt-bar i,.dt-fold .ic{transition:none}}
 </style>
 </head>
 <body>
@@ -2595,7 +2861,9 @@ const P = {
     x: 'M6 6l12 12M18 6L6 18',
     bookmark: 'M6 3h12v18l-6-4-6 4z',
     playlist: 'M4 6h13M4 11h13M4 16h7M18 12v8M14 16h8',
-    check: 'M5 12l5 5 9-10'
+    check: 'M5 12l5 5 9-10',
+    calendar: 'M5 6h14v14H5zM5 10h14M9 3v4M15 3v4',
+    pulse: 'M3 12h4l3-8 4 16 3-8h4'
 };
 
 const ic = n => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${P[n]}"/></svg>`;
@@ -3397,12 +3665,17 @@ async function boot() {
     await playIntro();
     await lobby();
     showNotice();
+    subCheck();
     if (MT.enabled && me.role === 'admin')
         toast('Mode maintenance sedang AKTIF. Hanya admin yang bisa masuk.');
     document.querySelectorAll('.tab[data-t=admin]').forEach(b => b.classList.toggle('mton', !!MT.enabled));
     const rc = new URLSearchParams(location.search).get('room');
     if (rc)
         joinRoom(rc);
+    else {
+        const tq = new URLSearchParams(location.search).get('t');
+        if (tq) openTitle(tq);
+    }
 }
 
 function shell() {
@@ -3555,7 +3828,7 @@ ${row('Keluar', 'Akhiri sesi di perangkat ini', `<button class="btn sm danger" o
         loadStats();
     },
     async admin(sec = 'cat', q = '') {
-        const S = [['cat', 'Katalog', 'film'], ['add', 'Tambah', 'sparkle'], ['ep', 'Episode', 'tv'], ['imp', 'Import', 'down'], ['fb', 'Masukan', 'mail'], ['notice', 'Update', 'sparkle'], ['maint', 'Maintenance', 'tool']];
+        const S = [['cat', 'Katalog', 'film'], ['add', 'Tambah', 'sparkle'], ['ep', 'Episode', 'tv'], ['jq', 'Upload JSON', 'film'], ['imp', 'Import', 'down'], ['fb', 'Masukan', 'mail'], ['notice', 'Update', 'sparkle'], ['maint', 'Maintenance', 'tool']];
         const f = (l, c) => `<label class="fld"><span>${l}</span>${c}</label>`;
         const sers = titles.filter(t => t.type === 'series');
         const body = {
@@ -3565,12 +3838,14 @@ ${row('Keluar', 'Akhiri sesi di perangkat ini', `<button class="btn sm danger" o
             fb: () => `<div id="fblist">${skel(2)}</div>`,
             notice: () => noticeForm(),
             maint: () => maintForm(),
-            imp: () => impTab()
+            imp: () => impTab(),
+            jq: () => jqTab()
         }[sec]();
         $('#v').innerHTML = `<h2>${ic('tool')} Admin</h2><div class="seg adm">${S.map(x => `<button class="${x[0] === sec ? 'on' : ''}" onclick="views.admin('${x[0]}')">${ic(x[2])} ${x[1]}</button>`).join('')}</div>${body}`;
         if (sec === 'fb') loadFb();
         if (sec === 'notice') loadNotice();
         if (sec === 'maint') loadMaint();
+        if (sec === 'jq') { jqLoad(); jqShow(); }
         const aq = $('#aq');
         if (aq) aq.oninput = e => { $('#alist').innerHTML = adminList(e.target.value); };
     }
@@ -3657,6 +3932,463 @@ function watchdog(v) {
     }, 4000);
 }
 
+
+// ---- penjaga gambar beku (bug iOS/Safari: suara jalan, gambar diam / jadi gambar mati) ----
+// currentTime tetap maju karena audio, jadi pengawas biasa tidak sadar. Di sini kita hitung frame yang benar-benar tampil.
+let gd = null;
+
+function frameGuard(v) {
+    clearInterval(gd);
+    const now = () => Date.now();
+    const st = { rv: 0, sig: '', ct: v.currentTime || 0, t: now(), grace: now() + 4000, seen: false, level: 0, fails: [], u: v._u };
+    const sig = () => {
+        let q = 0;
+        try { if (v.getVideoPlaybackQuality) q = v.getVideoPlaybackQuality().totalVideoFrames || 0; } catch (e) { }
+        return st.rv + '|' + q + '|' + (v.webkitDecodedFrameCount || 0);
+    };
+    if (v.requestVideoFrameCallback) {
+        const loop = () => {
+            if (!v.isConnected || v._closed) return;
+            st.rv++;
+            try { v.requestVideoFrameCallback(loop); } catch (e) { }
+        };
+        try { v.requestVideoFrameCallback(loop); } catch (e) { }
+    }
+    const reset = (grace = 1500) => { st.sig = sig(); st.ct = v.currentTime; st.t = now(); st.grace = now() + grace; };
+    ['seeked', 'ratechange', 'loadedmetadata', 'emptied', 'waiting'].forEach(e => v.addEventListener(e, () => reset(e === 'loadedmetadata' || e === 'emptied' ? 4000 : 1500)));
+    document.addEventListener('visibilitychange', () => reset(2500));
+    addEventListener('pageshow', () => reset(2500));
+
+    const revive = () => {
+        const at = v.currentTime, u = v._u, rate = v.playbackRate, was = suppress;
+        st.fails = st.fails.filter(x => now() - x < 90000);
+        st.fails.push(now());
+        if (st.fails.length > 5) { clearInterval(gd); return toast('Gambar terus macet. Coba ganti kualitas atau muat ulang halaman'); }
+        if (st.level === 0) {
+            // langkah ringan: geser sedikit supaya dekoder membuat frame baru
+            st.level = 1;
+            try { if (hlsI) hlsI.recoverMediaError(); v.currentTime = Math.max(0, at - .3); } catch (e) { }
+            return;
+        }
+        // langkah kuat: muat ulang sumber di posisi yang sama (membuang dekoder yang rusak)
+        st.level = 0;
+        suppress = true;
+        toast('Gambar macet, menyambung ulang...');
+        loadSrc(v, u, Math.max(0, at - .5));
+        v.addEventListener('loadedmetadata', () => {
+            try { v.playbackRate = rate; } catch (e) { }
+            v.play().catch(() => { });
+            setTimeout(() => { suppress = was; }, 900);
+        }, { once: true });
+        setTimeout(() => { suppress = was; }, 10000);
+    };
+
+    gd = setInterval(() => {
+        if (!v.isConnected || v._closed) return clearInterval(gd);
+        if (v._u !== st.u) { st.u = v._u; st.seen = false; reset(4000); return; }
+        const ct = v.currentTime;
+        const active = !v.paused && !v.ended && !v.seeking && !document.hidden && v.readyState >= 3 && v.videoWidth > 0;
+        if (!active || now() < st.grace) { reset(0); st.grace = Math.max(st.grace, 0); return; }
+        const s = sig();
+        if (s !== st.sig) { if (st.sig) st.seen = true; st.sig = s; st.ct = ct; st.t = now(); st.level = 0; return; }
+        // tidak ada frame baru >= 3 detik padahal waktu terus jalan = gambar beku
+        if (st.seen && now() - st.t >= 3000 && ct - st.ct > .3) {
+            revive();
+            st.t = now(); st.ct = ct; st.grace = now() + 3500;
+        }
+    }, 1000);
+}
+
+const NMP_SPRITE = `<svg id="np-sprite" width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="np-i-back" viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20z"/></symbol><symbol id="np-i-play" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></symbol><symbol id="np-i-pause" viewBox="0 0 24 24"><path d="M6 19h4V5H6zm8-14v14h4V5z"/></symbol><symbol id="np-i-next" viewBox="0 0 24 24"><path d="M6 18l8.5-6L6 6zM16 6v12h2V6z"/></symbol><symbol id="np-i-r10" viewBox="0 0 24 24"><path d="M11.99 5V1l-5 5 5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6h-2c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"/><text x="12" y="16.2" font-size="7.4" text-anchor="middle" font-weight="700" font-family="sans-serif">10</text></symbol><symbol id="np-i-f10" viewBox="0 0 24 24"><path d="M18 13c0 3.31-2.69 6-6 6s-6-2.69-6-6 2.69-6 6-6v4l5-5-5-5v4c-4.42 0-8 3.58-8 8s3.58 8 8 8 8-3.58 8-8z"/><text x="12" y="16.2" font-size="7.4" text-anchor="middle" font-weight="700" font-family="sans-serif">10</text></symbol><symbol id="np-i-fs" viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7zm-2-4h2V7h3V5H5zm12 7h-3v2h5v-5h-2zM14 5v2h3v3h2V5z"/></symbol><symbol id="np-i-xfs" viewBox="0 0 24 24"><path d="M5 16h3v3h2v-5H5zm3-8H5v2h5V5H8zm6 11h2v-3h3v-2h-5zm2-11V5h-2v5h5V8z"/></symbol><symbol id="np-i-pip" viewBox="0 0 24 24"><path d="M19 7h-8v6h8zm2-4H3a2 2 0 00-2 2v14a2 2 0 002 2h18a2 2 0 002-2V5a2 2 0 00-2-2zm0 16H3V5h18z"/></symbol><symbol id="np-i-cast" viewBox="0 0 24 24"><path d="M1 18v3h3c0-1.66-1.34-3-3-3zm0-4v2c2.76 0 5 2.24 5 5h2c0-3.87-3.13-7-7-7zm0-4v2c4.97 0 9 4.03 9 9h2c0-6.08-4.93-11-11-11zm20-7H3a2 2 0 00-2 2v3h2V5h18v14h-7v2h7a2 2 0 002-2V5a2 2 0 00-2-2z"/></symbol><symbol id="np-i-more" viewBox="0 0 24 24"><path d="M6 10a2 2 0 100 4 2 2 0 000-4zm12 0a2 2 0 100 4 2 2 0 000-4zm-6 0a2 2 0 100 4 2 2 0 000-4z"/></symbol><symbol id="np-i-lock" viewBox="0 0 24 24"><path d="M18 8h-1V6a5 5 0 00-10 0v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm-6 9a2 2 0 110-4 2 2 0 010 4zm3.1-9H8.9V6a3.1 3.1 0 016.2 0z"/></symbol><symbol id="np-i-unlock" viewBox="0 0 24 24"><path d="M12 17a2 2 0 100-4 2 2 0 000 4zm6-9h-1V6a5 5 0 00-10 0h1.9a3.1 3.1 0 016.2 0v2H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V10a2 2 0 00-2-2zm0 12H6V10h12z"/></symbol><symbol id="np-i-sun" viewBox="0 0 24 24"><path d="M12 7a5 5 0 100 10 5 5 0 000-10zM11 1h2v3h-2zm0 19h2v3h-2zM3.5 5L5 3.5l2.1 2.1-1.5 1.5zM17 18.9l1.5-1.5 2.1 2.1-1.5 1.5zM1 11h3v2H1zm19 0h3v2h-3zM3.5 19l2.1-2.1 1.5 1.5L5 20.5zM17 5.1l2.1-2.1L20.5 5l-2.1 2.1z"/></symbol><symbol id="np-i-vol" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9zm13.5 3A4.5 4.5 0 0014 8v8a4.5 4.5 0 002.5-4zM14 3.23v2.06a7 7 0 010 13.42v2.06a9 9 0 000-17.54z"/></symbol><symbol id="np-i-mute" viewBox="0 0 24 24"><path d="M16.5 12A4.5 4.5 0 0014 8v2.2l2.4 2.4c.1-.2.1-.4.1-.6zm2.5 0c0 .94-.2 1.82-.54 2.64l1.51 1.51A8.8 8.8 0 0021 12a9 9 0 00-7-8.77v2.06A7 7 0 0119 12zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06a9 9 0 003.69-1.81L19.73 21 21 19.73l-9-9zM12 4L9.91 6.09 12 8.18z"/></symbol><symbol id="np-i-cam" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M9 3L7.17 5H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2h-3.17L15 3zm3 15a5 5 0 110-10 5 5 0 010 10z"/></symbol><symbol id="np-i-star" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></symbol><symbol id="np-i-cc" viewBox="0 0 24 24"><path d="M19 4H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V6a2 2 0 00-2-2zm-8 7H9.5v-.5h-2v3h2V13H11v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-4a1 1 0 011-1h3a1 1 0 011 1zm7 0h-1.5v-.5h-2v3h2V13H18v1a1 1 0 01-1 1h-3a1 1 0 01-1-1v-4a1 1 0 011-1h3a1 1 0 011 1z"/></symbol></svg>`;
+const ensureNmpSprite = () => { if (!document.getElementById('np-sprite')) document.body.insertAdjacentHTML('beforeend', NMP_SPRITE); };
+
+// ======================================================================
+// PEMUTAR BARU (NMP): kontrol custom ala MX/Netflix. Semua class berawalan "np-",
+// semua listener dibersihkan lewat destroy() saat film ditutup / kembali ke detail.
+// ======================================================================
+const nmpHtml = (url, poster) => `<div class="nmp" id="nmp" data-playing="0">
+<video id="vid" data-src="${esc(url)}" playsinline webkit-playsinline x-webkit-airplay="allow" preload="metadata"></video>
+<div class="np-dim"></div>
+<div class="np-poster"${poster ? ` style="background-image:url('${esc(poster)}')"` : ''}></div>
+<div class="np-spin"></div><div class="np-hud"></div>
+<div class="np-err"><div class="np-errt">Video tidak bisa diputar</div><button class="np-btn" data-act="retry">Coba lagi</button></div>
+<div class="np-nextbox"><span class="np-nextt"></span><button class="np-btn" data-act="nextnow">Putar</button><button class="np-btn np-g" data-act="nextcancel">Batal</button></div>
+<div class="np-tip">Fitur baru! Screenshot dan bagikan dengan teman</div>
+<div class="np-ui np-top">
+<button class="np-ib" data-act="back"><svg class="np-i"><use href="#np-i-back"/></svg></button>
+<h2 class="np-full np-fstitle"></h2><span class="np-sp np-mini"></span>
+<span class="np-chip np-full np-net">WIFI</span><span class="np-clock np-full">--:--</span><span class="np-bat np-full"><i class="np-batf"></i></span>
+<button class="np-qchip np-mini np-qmini" data-act="quality">AUTO</button>
+<button class="np-ib" data-act="pip"><svg class="np-i"><use href="#np-i-pip"/></svg></button>
+<button class="np-ib" data-act="cast"><svg class="np-i"><use href="#np-i-cast"/></svg></button>
+<button class="np-ib np-full" data-act="more"><svg class="np-i"><use href="#np-i-more"/></svg></button>
+</div>
+<div class="np-ui np-mid">
+<button class="np-ib" data-act="rew"><svg class="np-i"><use href="#np-i-r10"/></svg></button>
+<button class="np-ib np-big" data-act="play"><svg class="np-i np-pl"><use href="#np-i-pause"/></svg><svg class="np-i np-pa"><use href="#np-i-play"/></svg></button>
+<button class="np-ib" data-act="fwd"><svg class="np-i"><use href="#np-i-f10"/></svg></button>
+</div>
+<button class="np-ui np-lockbtn" data-act="lock"><svg class="np-i"><use href="#np-i-unlock"/></svg></button>
+<div class="np-ui np-vs np-l np-vsb"><svg class="np-i"><use href="#np-i-sun"/></svg><div class="np-tr"><div class="np-fl"></div></div></div>
+<div class="np-ui np-vs np-r np-vsv"><button data-act="mute" class="np-mute"><svg class="np-i"><use href="#np-i-vol"/></svg></button><div class="np-tr"><div class="np-fl"></div></div></div>
+<div class="np-ui np-rside">
+<button class="np-ib" data-act="shot"><svg class="np-i"><use href="#np-i-cam"/></svg></button>
+<button class="np-ib np-markf" data-act="mark"><svg class="np-i"><use href="#np-i-star"/></svg></button>
+</div>
+<div class="np-ui np-bot np-mini">
+<button class="np-ib" data-act="play" style="width:34px"><svg class="np-i np-pl"><use href="#np-i-pause"/></svg><svg class="np-i np-pa"><use href="#np-i-play"/></svg></button>
+<div class="np-seek"><i class="np-b"></i><i class="np-f"></i><i class="np-k"></i><span class="np-pv"></span></div>
+<span class="np-tm"><span class="np-tc">00:00</span> / <span class="np-td">00:00</span></span>
+<button class="np-ib" data-act="fs" style="width:34px"><svg class="np-i"><use href="#np-i-fs"/></svg></button>
+</div>
+<div class="np-ui np-bot np-full">
+<div class="np-fsrow"><span class="np-tm np-tc">00:00</span><div class="np-seek"><i class="np-b"></i><i class="np-f"></i><i class="np-k"></i><span class="np-pv"></span></div><span class="np-tm np-td">00:00</span></div>
+<div class="np-brow">
+<button class="np-ib" data-act="play"><svg class="np-i np-pl"><use href="#np-i-pause"/></svg><svg class="np-i np-pa"><use href="#np-i-play"/></svg></button>
+<button class="np-ib np-nxb" data-act="next"><svg class="np-i"><use href="#np-i-next"/></svg></button>
+<span class="np-sp"></span>
+<button class="np-ib np-ccb" data-act="cc"><svg class="np-i"><use href="#np-i-cc"/></svg></button>
+<button class="np-txt np-epbtn" data-act="episodes">Episode</button>
+<button class="np-txt np-qfull" data-act="quality">AUTO</button>
+<button class="np-ib" data-act="fs"><svg class="np-i"><use href="#np-i-xfs"/></svg></button>
+</div></div>
+<div class="np-shbg"></div>
+<div class="np-sheet"><h3 class="np-sht"></h3><div class="np-shl"></div></div>
+<div class="np-toast"></div>
+</div>`;
+
+function nmPlayer(root, c) {
+    const v = c.v, film = root.closest('.film');
+    const q = s => root.querySelector(s), qa = s => [...root.querySelectorAll(s)];
+    const off = [];
+    const on = (t, e, f, o) => { t.addEventListener(e, f, o); off.push(() => t.removeEventListener(e, f, o)); };
+    const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+    const fmt = t => { t = Math.max(0, Math.floor(t || 0)); const h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60, p = n => String(n).padStart(2, '0'); return (h ? h + ':' : '') + p(m) + ':' + p(s); };
+    const lsGet = (k, d) => { try { const x = localStorage.getItem(k); return x == null ? d : JSON.parse(x); } catch (e) { return d; } };
+    const lsSet = (k, x) => { try { localStorage.setItem(k, JSON.stringify(x)); } catch (e) { } };
+    const prefs = Object.assign({ loop: false, fit: 'contain', rate: 1 }, lsGet('nm_pp', {}));
+    const savePrefs = () => lsSet('nm_pp', prefs);
+
+    let locked = false, bri = 78, vol = 100, sleepT = null, sheetOpen = false, dragging = false, pfs = false;
+    let hideT, toastT, hudT, nextCd, g = null, lastTap = 0, tapT, dead = false;
+
+    // ---------- toast / hud / sheet (lokal, supaya tetap kelihatan saat layar penuh) ----------
+    const toast = m => { const t = q('.np-toast'); t.textContent = m; t.classList.add('np-on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('np-on'), 2600); };
+    const hud = m => { const h = q('.np-hud'); h.textContent = m; h.classList.add('np-on'); clearTimeout(hudT); hudT = setTimeout(() => h.classList.remove('np-on'), 900); };
+    function openSheet(t, items) {
+        q('.np-sht').textContent = t;
+        const L = q('.np-shl'); L.innerHTML = '';
+        items.forEach(it => {
+            const b = document.createElement('button');
+            b.className = 'np-row' + (it.on ? ' np-on' : '');
+            b.innerHTML = '<span>' + esc(it.l) + '</span>' + (it.s ? '<small>' + esc(it.s) + '</small>' : '');
+            b.onclick = () => { if (!it.keep) closeSheet(); it.fn && it.fn(); };
+            L.append(b);
+        });
+        q('.np-sheet').classList.add('np-on'); q('.np-shbg').classList.add('np-on'); sheetOpen = true;
+    }
+    function closeSheet() { q('.np-sheet').classList.remove('np-on'); q('.np-shbg').classList.remove('np-on'); sheetOpen = false; show(); }
+    q('.np-shbg').onclick = closeSheet;
+
+    // ---------- tampil / sembunyi kontrol ----------
+    function show() {
+        root.classList.add('np-show'); clearTimeout(hideT);
+        if (!v.paused && !sheetOpen && !dragging) hideT = setTimeout(() => root.classList.remove('np-show'), 3500);
+    }
+    const hideUI = () => { if (!sheetOpen) root.classList.remove('np-show'); };
+
+    // ---------- helper sumber ----------
+    const srcs = () => c.srcs();
+    const curRes = () => { const s = srcs().find(x => x.url === c.curUrl()); return s ? String(s.res).toUpperCase() : 'AUTO'; };
+    const paintQ = () => { q('.np-qmini').textContent = q('.np-qfull').textContent = curRes(); };
+    const canCtl = () => { if (!c.quiet()) { toast('Hanya host yang mengatur pemutaran'); return false; } return true; };
+    const nextEp = () => { const ep = c.curEp(), l = c.eps(); if (!ep) return null; const i = l.findIndex(x => x.id == ep.id); return l[i + 1] || null; };
+
+    // ---------- aksi ----------
+    const togglePlay = () => { if (!canCtl()) return; v.paused ? v.play().catch(() => toast('Tap layar untuk memutar')) : v.pause(); };
+    const skip = d => { if (!canCtl()) return; v.currentTime = clamp((v.currentTime || 0) + d, 0, v.duration || 1e9); hud((d > 0 ? '+' : '') + d + ' dtk'); };
+    const isFs = () => root.classList.contains('np-fs');
+    const fsEl = () => document.fullscreenElement || document.webkitFullscreenElement;
+
+    function applyLayout() {
+        if (dead) return;
+        const land = matchMedia('(orientation:landscape) and (max-height:520px)').matches;
+        const onFs = !!fsEl() || pfs || land;
+        root.classList.toggle('np-fs', onFs);
+        if (film) film.style.overflowY = onFs ? 'hidden' : '';
+        qa('[data-act="fs"] use').forEach(u => u.setAttribute('href', onFs ? '#np-i-xfs' : '#np-i-fs'));
+        if (onFs && !lsGet('nm_tip_ss', false)) {
+            lsSet('nm_tip_ss', true);
+            const t = q('.np-tip'); t.classList.add('np-on'); setTimeout(() => t.classList.remove('np-on'), 6500);
+        }
+        show();
+    }
+    async function toggleFs() {
+        if (fsEl() || pfs) {
+            pfs = false;
+            try { await (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { }
+            try { screen.orientation.unlock(); } catch (e) { }
+            applyLayout(); return;
+        }
+        try { const f = root.requestFullscreen || root.webkitRequestFullscreen; if (f) await f.call(root, { navigationUI: 'hide' }); else pfs = true; } catch (e) { pfs = true; }
+        try { await screen.orientation.lock('landscape'); } catch (e) { }
+        applyLayout();
+    }
+    on(document, 'fullscreenchange', applyLayout); on(document, 'webkitfullscreenchange', applyLayout);
+    on(window, 'resize', applyLayout); on(window, 'orientationchange', applyLayout);
+
+    async function pip() {
+        try {
+            if (document.pictureInPictureElement) await document.exitPictureInPicture();
+            else if (document.pictureInPictureEnabled && !v.disablePictureInPicture) await v.requestPictureInPicture();
+            else if (v.webkitSetPresentationMode) v.webkitSetPresentationMode('picture-in-picture');
+            else toast('PiP tidak didukung browser ini');
+        } catch (e) { toast('PiP belum bisa dipakai sekarang'); }
+    }
+    const cast = () => { if (v.remote && v.remote.prompt) v.remote.prompt().catch(() => toast('Tidak ada perangkat cast')); else toast('Cast tidak didukung browser ini'); };
+
+    function shot() {
+        try {
+            const cv = document.createElement('canvas'); cv.width = v.videoWidth; cv.height = v.videoHeight;
+            if (!cv.width) return toast('Video belum siap');
+            cv.getContext('2d').drawImage(v, 0, 0);
+            cv.toBlob(async b => {
+                if (!b) return toast('Screenshot gagal');
+                const name = `${c.title()}-${fmt(v.currentTime).replace(':', 'm')}s.png`;
+                const f = new File([b], name, { type: 'image/png' });
+                if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: c.title() }); return; } catch (e) { } }
+                const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; a.click(); toast('Screenshot disimpan');
+            }, 'image/png');
+        } catch (e) { toast('Sumber video tidak mengizinkan screenshot (CORS)'); }
+    }
+
+    // ---------- sheet: kualitas, episode, kecepatan, timer tidur, pengaturan, subtitle ----------
+    const qualitySheet = () => srcs().length < 2 ? toast('Hanya ada satu kualitas untuk video ini') : openSheet('Kualitas', srcs().map(s => ({ l: String(s.res).toUpperCase(), on: s.url === c.curUrl(), fn: () => { if (s.url !== c.curUrl()) { c.setRes(s); } } })));
+    const episodesSheet = () => {
+        const l = c.eps(), ep = c.curEp();
+        openSheet('Episode', l.map(e => ({ l: `Ep ${e.number}${e.name ? ' · ' + e.name : ''}`, s: l.some(x => x.season !== l[0].season) ? 'S' + e.season : '', on: ep && e.id == ep.id, fn: () => pickEp(e) })));
+    };
+    const speedSheet = () => openSheet('Kecepatan', [.5, .75, 1, 1.25, 1.5, 2].map(r => ({ l: r + 'x', on: v.playbackRate === r, fn: () => setRate(r) })));
+    const setRate = r => { v.playbackRate = v.defaultPlaybackRate = r; prefs.rate = r; savePrefs(); toast('Kecepatan ' + r + 'x'); };
+    const sleepSheet = () => openSheet('Timer tidur', [['Mati', 0], ['15 menit', 15], ['30 menit', 30], ['60 menit', 60]].map(([l, m]) => ({
+        l, fn: () => { clearTimeout(sleepT); if (m) { sleepT = setTimeout(() => { v.pause(); toast('Timer tidur: pemutaran dijeda'); }, m * 60000); toast('Berhenti dalam ' + m + ' menit'); } else toast('Timer tidur mati'); }
+    })));
+    function moreSheet() {
+        const fitL = { contain: 'Pas', cover: 'Penuh', fill: 'Regang' };
+        const auto = localStorage.nm_auto !== '0';
+        openSheet('Pengaturan', [
+            { l: 'Kecepatan', s: v.playbackRate + 'x', keep: 1, fn: speedSheet },
+            { l: 'Rasio layar', s: fitL[prefs.fit], keep: 1, fn: () => { const o = ['contain', 'cover', 'fill']; prefs.fit = o[(o.indexOf(prefs.fit) + 1) % 3]; v.style.objectFit = prefs.fit; savePrefs(); moreSheet(); } },
+            { l: 'Timer tidur', keep: 1, fn: sleepSheet },
+            { l: 'Putar episode berikutnya otomatis', s: auto ? 'Aktif' : 'Mati', keep: 1, fn: () => { localStorage.nm_auto = auto ? '0' : '1'; moreSheet(); } },
+            { l: 'Ulangi video', s: prefs.loop ? 'Aktif' : 'Mati', keep: 1, fn: () => { prefs.loop = !prefs.loop; v.loop = prefs.loop; savePrefs(); moreSheet(); } },
+        ]);
+    }
+    const subIn = Object.assign(document.createElement('input'), { type: 'file', accept: '.vtt,.srt,text/vtt' });
+    subIn.hidden = true; root.append(subIn);
+    function ccSheet() {
+        const tr = [...v.textTracks].filter(t => t.kind === 'subtitles' || t.kind === 'captions');
+        const items = [{ l: 'Mati', on: !tr.some(t => t.mode === 'showing'), fn: () => { tr.forEach(t => t.mode = 'hidden'); q('.np-ccb').style.color = ''; } }];
+        tr.forEach(t => items.push({ l: t.label || t.language || 'Subtitle', on: t.mode === 'showing', fn: () => { tr.forEach(x => x.mode = x === t ? 'showing' : 'hidden'); q('.np-ccb').style.color = 'var(--ac2)'; } }));
+        items.push({ l: 'Muat dari file (.vtt / .srt)…', fn: () => subIn.click() });
+        openSheet('Subtitle', items);
+    }
+    subIn.onchange = async () => {
+        const f = subIn.files[0]; if (!f) return;
+        let t = await f.text();
+        if (!/^WEBVTT/.test(t.trim())) t = 'WEBVTT\n\n' + t.replace(/\r/g, '').replace(/(\d+:\d+:\d+),(\d+)/g, '$1.$2');
+        [...v.querySelectorAll('track')].forEach(x => x.remove());
+        const tr = document.createElement('track'); tr.kind = 'subtitles'; tr.label = f.name.replace(/\.\w+$/, ''); tr.default = true;
+        tr.src = URL.createObjectURL(new Blob([t], { type: 'text/vtt' })); v.append(tr);
+        setTimeout(() => { tr.track.mode = 'showing'; }, 150);
+        q('.np-ccb').style.color = 'var(--ac2)'; toast('Subtitle dimuat'); subIn.value = '';
+    };
+
+    function pickEp(e) { if (!canCtl()) return; cancelNext(); c.pickEp(e); }
+    function startNext(n) {
+        let n5 = 5; const b = q('.np-nextbox'); b.classList.add('np-on');
+        const tick = () => { q('.np-nextt').textContent = `Episode ${n.number} dalam ${n5}…`; if (n5-- <= 0) { cancelNext(); c.pickEp(n); } else nextCd = setTimeout(tick, 1000); };
+        tick();
+    }
+    function cancelNext() { clearTimeout(nextCd); q('.np-nextbox').classList.remove('np-on'); }
+
+    function showErr(m) { q('.np-errt').textContent = m; q('.np-err').classList.add('np-on'); root.classList.remove('np-wait'); }
+
+    function act(a) {
+        switch (a) {
+            case 'back': if (fsEl() || pfs) toggleFs(); else c.onBack(); break;
+            case 'play': togglePlay(); break;
+            case 'rew': skip(-10); break; case 'fwd': skip(10); break;
+            case 'next': { if (!canCtl()) break; const n = nextEp(); n ? pickEp(n) : toast('Ini episode terakhir'); } break;
+            case 'pip': pip(); break; case 'cast': cast(); break; case 'more': moreSheet(); break;
+            case 'quality': qualitySheet(); break; case 'episodes': episodesSheet(); break; case 'cc': ccSheet(); break;
+            case 'fs': toggleFs(); break;
+            case 'lock': locked = !locked; root.classList.toggle('np-locked', locked); qa('.np-lockbtn use').forEach(u => u.setAttribute('href', locked ? '#np-i-lock' : '#np-i-unlock')); toast(locked ? 'Layar dikunci' : 'Kunci dibuka'); show(); break;
+            case 'shot': shot(); break;
+            case 'mark': c.toggleSave(); setTimeout(paintMark, 350); break;
+            case 'mute': v.muted = !v.muted; break;
+            case 'retry': q('.np-err').classList.remove('np-on'); c.reload(v.currentTime || 0); break;
+            case 'nextnow': { cancelNext(); const n = nextEp(); if (n) c.pickEp(n); } break;
+            case 'nextcancel': cancelNext(); break;
+        }
+    }
+    on(root, 'click', e => { const b = e.target.closest('[data-act]'); if (b) { act(b.dataset.act); e.stopPropagation(); } });
+
+    // ---------- seek bar ----------
+    function paint() {
+        const d = v.duration || 0, cur = v.currentTime || 0;
+        if (!dragging) { const p = d ? cur / d * 100 : 0; qa('.np-seek').forEach(s => { s.querySelector('.np-f').style.width = p + '%'; s.querySelector('.np-k').style.left = p + '%'; }); }
+        qa('.np-tc').forEach(e => e.textContent = fmt(cur)); qa('.np-td').forEach(e => e.textContent = fmt(d));
+        try { if (v.buffered.length && d) { const be = v.buffered.end(v.buffered.length - 1) / d * 100; qa('.np-seek .np-b').forEach(b => b.style.width = be + '%'); } } catch (e) { }
+    }
+    qa('.np-seek').forEach(s => {
+        const pos = e => { const r = s.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width, 0, 1); };
+        const prev = r => { const p = r * 100; s.querySelector('.np-f').style.width = p + '%'; s.querySelector('.np-k').style.left = p + '%'; const pv = s.querySelector('.np-pv'); pv.style.left = p + '%'; pv.textContent = fmt(r * (v.duration || 0)); };
+        s.addEventListener('pointerdown', e => { if (!canCtl()) return; dragging = true; s.classList.add('np-drag'); s.setPointerCapture(e.pointerId); prev(pos(e)); clearTimeout(hideT); e.stopPropagation(); });
+        s.addEventListener('pointermove', e => { if (dragging) prev(pos(e)); });
+        const end = e => { if (!dragging) return; dragging = false; s.classList.remove('np-drag'); if (v.duration) v.currentTime = pos(e) * v.duration; show(); };
+        s.addEventListener('pointerup', end);
+        s.addEventListener('pointercancel', () => { dragging = false; s.classList.remove('np-drag'); });
+    });
+
+    // ---------- slider kecerahan & volume (kecerahan pakai lapisan gelap, bukan CSS filter: ringan di HP kentang) ----------
+    const dim = q('.np-dim');
+    const setBri = p => { bri = p; const b = 0.3 + 0.9 * p / 100; dim.style.opacity = Math.max(0, 1 - b).toFixed(2); };
+    const setVol = p => { vol = p; v.volume = p / 100; if (p > 0) v.muted = false; };
+    function vslider(el, get, set) {
+        const tr = el.querySelector('.np-tr'), fl = el.querySelector('.np-fl');
+        const draw = () => fl.style.height = get() + '%'; draw();
+        const at = e => { const r = tr.getBoundingClientRect(); set(clamp((r.bottom - e.clientY) / r.height * 100, 0, 100)); draw(); };
+        let d = false;
+        tr.addEventListener('pointerdown', e => { d = true; tr.setPointerCapture(e.pointerId); at(e); e.stopPropagation(); });
+        tr.addEventListener('pointermove', e => { if (d) at(e); });
+        tr.addEventListener('pointerup', () => d = false);
+        return draw;
+    }
+    const drawB = vslider(q('.np-vsb'), () => bri, setBri), drawV = vslider(q('.np-vsv'), () => v.muted ? 0 : vol, setVol);
+    setBri(bri);
+
+    // ---------- gestur: geser kecerahan/volume/maju-mundur, tap ganda, tahan = 2x ----------
+    on(root, 'pointerdown', e => {
+        if (e.target.closest('[data-act],.np-seek,.np-vs,.np-sheet,.np-nextbox,.np-err,.np-lockbtn')) return;
+        g = { x: e.clientX, y: e.clientY, mode: null, moved: false, b: bri, vl: v.muted ? 0 : vol, t0: v.currentTime, seekTo: null };
+        g.lp = setTimeout(() => { if (g && !g.moved && !locked && !v.paused && c.quiet()) { g.mode = 'speed'; g.rate = v.playbackRate; v.playbackRate = 2; hud('▶▶ 2x'); } }, 550);
+    });
+    on(root, 'pointermove', e => {
+        if (!g) return;
+        const dx = e.clientX - g.x, dy = e.clientY - g.y;
+        if (!g.mode && (Math.abs(dx) > 12 || Math.abs(dy) > 12)) {
+            g.moved = true; clearTimeout(g.lp);
+            if (!isFs() || locked) g.mode = 'none';
+            else if (Math.abs(dy) > Math.abs(dx)) g.mode = e.clientX < root.getBoundingClientRect().left + root.clientWidth / 2 ? 'bri' : 'vol';
+            else g.mode = c.quiet() ? 'seek' : 'none';
+        }
+        const h = root.clientHeight || 1, w = root.clientWidth || 1;
+        if (g.mode === 'bri') { setBri(clamp(g.b - dy / h * 130, 0, 100)); drawB(); hud('Kecerahan ' + Math.round(bri) + '%'); }
+        else if (g.mode === 'vol') { setVol(clamp(g.vl - dy / h * 130, 0, 100)); drawV(); hud('Volume ' + Math.round(vol) + '%'); }
+        else if (g.mode === 'seek' && v.duration) { g.seekTo = clamp(g.t0 + dx / w * 120, 0, v.duration); hud((dx >= 0 ? '⏩ ' : '⏪ ') + fmt(g.seekTo) + ' / ' + fmt(v.duration)); }
+    });
+    function gEnd(e, cancel) {
+        if (!g) return; clearTimeout(g.lp); const s = g; g = null;
+        if (s.mode === 'speed') { v.playbackRate = s.rate; return; }
+        if (s.mode === 'seek' && s.seekTo != null) { v.currentTime = s.seekTo; return; }
+        if (s.moved || cancel) return;
+        if (locked) { root.classList.toggle('np-show'); return; }
+        const now = Date.now();
+        if (now - lastTap < 300) {
+            clearTimeout(tapT); lastTap = 0;
+            const r = root.getBoundingClientRect(), x = (e.clientX - r.left) / r.width;
+            if (x < .35) skip(-10); else if (x > .65) skip(10); else togglePlay();
+            return;
+        }
+        lastTap = now;
+        tapT = setTimeout(() => { root.classList.contains('np-show') && !v.paused ? hideUI() : show(); }, 260);
+    }
+    on(root, 'pointerup', e => gEnd(e, false)); on(root, 'pointercancel', e => gEnd(e, true));
+
+    // ---------- event video ----------
+    on(v, 'play', () => { root.dataset.playing = '1'; root.classList.add('np-started'); show(); });
+    on(v, 'pause', () => { root.dataset.playing = '0'; show(); });
+    on(v, 'playing', () => { root.classList.remove('np-wait'); root.classList.add('np-started'); q('.np-err').classList.remove('np-on'); });
+    on(v, 'canplay', () => root.classList.remove('np-wait'));
+    ['waiting', 'seeking'].forEach(n => on(v, n, () => root.classList.add('np-wait')));
+    on(v, 'seeked', () => root.classList.remove('np-wait'));
+    ['timeupdate', 'progress', 'loadedmetadata', 'durationchange'].forEach(n => on(v, n, paint));
+    on(v, 'volumechange', () => { qa('.np-mute use').forEach(u => u.setAttribute('href', v.muted || v.volume === 0 ? '#np-i-mute' : '#np-i-vol')); drawV(); });
+    on(v, 'error', () => { if (!v._closed) showErr('Video gagal dimuat. Coba lagi atau ganti kualitas.'); });
+    on(v, 'ended', () => { const n = nextEp(); if (n && localStorage.nm_auto !== '0' && c.quiet()) startNext(n); });
+    v.loop = prefs.loop; v.style.objectFit = prefs.fit; v.defaultPlaybackRate = prefs.rate; v.playbackRate = prefs.rate;
+
+    // ---------- keyboard ----------
+    on(document, 'keydown', e => {
+        if (/input|textarea|select|button/i.test(e.target.tagName)) return;
+        const k = e.key;
+        if (k === ' ' || k === 'k') { e.preventDefault(); togglePlay(); }
+        else if (k === 'ArrowRight') skip(e.shiftKey ? 10 : 5);
+        else if (k === 'ArrowLeft') skip(e.shiftKey ? -10 : -5);
+        else if (k === 'ArrowUp' && isFs()) { e.preventDefault(); setVol(clamp(vol + 5, 0, 100)); drawV(); hud('Volume ' + vol + '%'); }
+        else if (k === 'ArrowDown' && isFs()) { e.preventDefault(); setVol(clamp(vol - 5, 0, 100)); drawV(); hud('Volume ' + vol + '%'); }
+        else if (k === 'm') v.muted = !v.muted;
+        else if (k === 'f') toggleFs();
+        else if (k === 'n') act('next');
+        else return;
+        show();
+    });
+
+    // ---------- status bar (jam, baterai, jaringan) ----------
+    function tick() {
+        q('.np-clock').textContent = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false }).replace('.', ':');
+        const cn = navigator.connection;
+        q('.np-net').textContent = !navigator.onLine ? 'OFFLINE' : (cn && cn.type === 'wifi') ? 'WIFI' : cn && cn.effectiveType ? cn.effectiveType.toUpperCase() : 'ONLINE';
+    }
+    tick(); const clockT = setInterval(tick, 20000);
+    on(window, 'online', tick); on(window, 'offline', tick);
+    if (navigator.getBattery) navigator.getBattery().then(b => { const u = () => { if (!dead) q('.np-batf').style.width = Math.round(b.level * 100) + '%'; }; u(); b.addEventListener('levelchange', u); }).catch(() => { });
+
+    // ---------- media session ----------
+    function setMedia() {
+        if (!('mediaSession' in navigator)) return;
+        const ep = c.curEp();
+        try { navigator.mediaSession.metadata = new MediaMetadata({ title: c.title() + (ep ? ` · Ep ${ep.number}` : ''), artist: 'NauMovie', artwork: c.poster() ? [{ src: c.poster() }] : [] }); } catch (e) { }
+        const h = (a, f) => { try { navigator.mediaSession.setActionHandler(a, f); } catch (e) { } };
+        h('play', togglePlay); h('pause', togglePlay); h('seekbackward', () => skip(-10)); h('seekforward', () => skip(10));
+        h('nexttrack', nextEp() ? () => act('next') : null);
+    }
+
+    // ---------- sinkron dengan film (dipanggil saat ganti episode/kualitas) ----------
+    function paintMark() { q('.np-markf').classList.toggle('np-on', !!c.isSaved()); }
+    function refresh(reset) {
+        const ep = c.curEp();
+        q('.np-fstitle').textContent = c.title() + (ep ? ` (S${ep.season} E${ep.number})` : '');
+        q('.np-epbtn').style.display = c.eps().length > 1 ? '' : 'none';
+        q('.np-nxb').style.display = c.eps().length > 1 ? '' : 'none';
+        paintQ(); paintMark(); setMedia();
+        if (reset) {
+            cancelNext(); q('.np-err').classList.remove('np-on');
+            root.classList.remove('np-started'); root.dataset.playing = '0';
+            q('.np-poster').style.backgroundImage = c.poster() ? `url("${c.poster()}")` : '';
+        }
+    }
+    function destroy() {
+        if (dead) return; dead = true;
+        off.forEach(f => f()); off.length = 0;
+        clearInterval(clockT); clearTimeout(hideT); clearTimeout(toastT); clearTimeout(hudT); clearTimeout(nextCd); clearTimeout(sleepT); clearTimeout(tapT);
+        if (g) clearTimeout(g.lp);
+        try { if (fsEl()) (document.exitFullscreen || document.webkitExitFullscreen).call(document); } catch (e) { }
+        try { screen.orientation.unlock(); } catch (e) { }
+        if (film) film.style.overflowY = '';
+        if ('mediaSession' in navigator) ['play', 'pause', 'seekbackward', 'seekforward', 'nexttrack'].forEach(a => { try { navigator.mediaSession.setActionHandler(a, null); } catch (e) { } });
+    }
+
+    // posisi menempel di bawah header film
+    const bar = film && film.querySelector('.fbar');
+    if (bar) root.style.setProperty('--np-top', bar.offsetHeight + 'px');
+    refresh(false); applyLayout();
+    if (!c.curUrl()) showErr('Sumber video belum tersedia');
+    show();
+    return { refresh, destroy, paintMark, showErr, toast };
+}
+
 // ---- film ----
 let curEp = null, epList = [];
 
@@ -3683,15 +4415,18 @@ async function fillTmdb(t) {
     if (me.role === 'admin') sb.from('titles').update(patch).eq('id', t.id).then(() => { }, () => { });
 }
 
-let filmClose = null;
-addEventListener('popstate', () => { if (filmClose) filmClose(true); });
+let filmClose = null, filmPopFn = null, skipPop = false;
+addEventListener('popstate', () => {
+    if (skipPop) { skipPop = false; return; }
+    if (filmPopFn) filmPopFn(); else if (filmClose) filmClose(true);
+});
 
 async function openTitle(id, roomMode = false) {
     if ($('#film')) return;
     const t = titles.find(x => x.id == id);
     if (!t)
         return;
-    const [{ data: h0 }, { data: eps }] = await Promise.all([sb.from('history').select('progress,episode_id').eq('user_id', me.id).eq('title_id', id).maybeSingle(), sb.from('episodes').select('*').eq('title_id', id).order('season').order('number')]);
+    const [{ data: h0 }, { data: eps }] = await Promise.all([sb.from('history').select('*').eq('user_id', me.id).eq('title_id', id).maybeSingle(), sb.from('episodes').select('*').eq('title_id', id).order('season').order('number'), dtLoad(id)]);
     if ($('#film')) return;
     let hist = h0;
     epList = eps || [];
@@ -3700,12 +4435,12 @@ async function openTitle(id, roomMode = false) {
     curEp = isS ? (epList.find(e => e.id == pick) || epList[0]) : null;
     const lbl = () => curEp ? `S${curEp.season} E${curEp.number} · ${esc(curEp.name || '')}` : '';
     let curUrl = (pickSrc(curEp || t) || {}).url || '';
-    let stage = roomMode ? 'player' : 'info', v = null, saveFn = null;
+    let stage = roomMode ? 'player' : 'info', v = null, saveFn = null, np = null;
 
     const m = document.createElement('div');
     m.id = 'film';
     m.className = 'film';
-    m.innerHTML = `<header class="fbar"><button class="btn sm ghost" id="fback">${ic('back')} <span id="fbl">Kembali</span></button><span class="ft">${esc(t.title)}</span><button class="ib" id="cl" aria-label="Tutup" hidden>${ic('x')}</button></header><section id="finfo"></section><section id="fplayer" hidden></section>`;
+    m.innerHTML = `<header class="fbar"><button class="btn sm ghost" id="fback">${ic('back')} <span id="fbl">Kembali</span></button><span class="ft">${esc(t.title)}</span><button class="fa" id="fshare" aria-label="Bagikan" hidden>${ic('share')}</button><button class="fa" id="flike" aria-label="Suka" hidden>${ic('heart')}</button><button class="ib" id="cl" aria-label="Tutup" hidden>${ic('x')}</button></header><section id="finfo"></section><section id="fplayer" hidden></section>`;
     document.body.appendChild(m);
     document.documentElement.classList.add('vid-open');
     window.fxPause && fxPause(true);
@@ -3713,77 +4448,154 @@ async function openTitle(id, roomMode = false) {
     history.pushState({ film: 1 }, '');
 
     const setBar = () => {
-        $('#fbl').textContent = roomMode ? 'Keluar' : (stage === 'player' ? 'Detail' : 'Kembali');
+        const info = stage === 'info' && !roomMode;
+        $('#fbl').textContent = info ? '' : (roomMode ? 'Keluar' : 'Detail');
         $('#cl').hidden = roomMode || stage !== 'player';
+        $('#fshare').hidden = $('#flike').hidden = roomMode;
+        m.classList.toggle('st-info', info);
     };
     const saveDl = async () => {
         await sb.from('downloads').upsert({ user_id: me.id, title_id: id });
         toast('Tersimpan');
     };
 
-    // ---- layar 1: poster + sinopsis + tombol putar ----
-    const drawInfo = loading => {
-        const tm = t._tm && Number(t._tm.rating) > 0 ? Number(t._tm.rating).toFixed(1) : '';
-        const chips = [
-            `<span class="fc k">${t.type === 'series' ? 'Series' : 'Film'}</span>`,
-            t.year ? `<span class="fc">${t.year}</span>` : '',
-            ...String(t.genre || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 4).map(g => `<span class="fc">${esc(g)}</span>`),
-            ratings[id] ? `<span class="fc s">${ic('star')} ${ratings[id].avg}</span>` : '',
-            `<span class="fc vw" data-views="${id}">${viewsHtml(id)}</span>`,
-            tm ? `<span class="fc s">TMDB ${tm}</span>` : ''
-        ].join('');
-        const prog = hist && hist.progress > 5 && (!isS || hist.episode_id) ? hist.progress : 0;
-        const label = !curUrl ? 'Video belum tersedia'
-            : isS ? `${prog ? 'Lanjutkan' : 'Putar'} S${curEp.season} E${curEp.number}`
-            : (prog ? `Lanjutkan dari ${fmtT(prog)}` : 'Putar film');
-        const desc = t.description ? esc(t.description) : (loading ? 'Mengambil sinopsis dari TMDB...' : 'Belum ada sinopsis.');
-        $('#finfo').innerHTML = `<div class="fin"><div class="fposter" role="img" aria-label="Poster ${esc(t.title)}" ${bg(sm(t.thumbnail_url, 'w500'))}></div><div class="ftx"><h1 class="ftitle">${esc(t.title)}</h1><div class="fchips">${chips}</div><p class="fdesc ${t.description ? '' : 'ld'}">${desc}</p><div class="fcta"><button class="btn big" id="fgo" ${curUrl ? '' : 'disabled'}>${ic('play')} ${label}</button><span class="acts" data-acts></span></div>${isS ? `<p class="hint">${epList.length} episode tersedia</p>` : ''}</div></div>`;
-        $('#fgo').onclick = showPlayer;
-        filmActs(document.querySelector('#finfo [data-acts]'), t);
-        refreshViews(id);
+    // ---- layar 1: detail judul (hero, sinopsis, progres, detail, daftar episode) ----
+    const seenAt0 = SUBS[id] && SUBS[id].seen_at;
+    if (SUBS[id]) sb.from('subscriptions').update({ seen_at: new Date().toISOString() }).eq('user_id', me.id).eq('title_id', id).then(() => { }, () => { });
+    const playEp = e => {
+        if (e) { curEp = e; curUrl = (pickSrc(e) || {}).url || e.video_url || ''; }
+        showPlayer();
     };
+    const drawInfo = loading => dtRender({
+        t, id, loading, isS, root: $('#finfo'), seenAt: seenAt0,
+        eps: () => epList, hist: () => hist,
+        url: it => (pickSrc(it) || {}).url || it.video_url || '',
+        movieUrl: () => (pickSrc(t) || {}).url || '',
+        play: playEp, redraw: () => drawInfo(false)
+    });
 
     // ---- layar 2: halaman film (pemutar, kualitas, rating, episode) ----
     const buildPlayer = () => {
-        $('#fplayer').innerHTML = `<div class="fvid"><video id="vid" data-src="${esc(curUrl)}" controls playsinline preload="metadata"></video></div><div class="fpb"><div class="resrow" id="resrow"></div><h2 class="ptitle">${esc(t.title)}</h2><b class="epn" id="epn">${lbl()}</b><div class="fchips"><span class="fc vw" data-views="${id}">${viewsHtml(id)}</span></div><div class="rate" id="rate"></div><div id="rinfo"></div><div class="acts" data-acts></div>${isS ? `<h3 class="eph">Episode</h3><div id="eps">${epList.map(epRow).join('')}</div>` : ''}${roomMode ? '' : '<section class="cchat glass" id="cchat"></section>'}</div>`;
+        $('#fplayer').innerHTML = `<div class="fvid npw">${nmpHtml(curUrl, (curEp && curEp.thumbnail_url) || t.thumbnail_url)}</div>
+<div class="fpb">
+<nav class="ptabs" id="ptabs">${roomMode ? '<button class="on" data-pt="info">Informasi</button><button data-pt="room">Nobar</button>' : '<button class="on" data-pt="info">Informasi</button><button data-pt="cm">Komentar</button>'}</nav>
+<div class="ppanel" id="pt-info">
+<div class="pcard" id="pcEp"></div>
+<div class="pcard pinfo"><div class="pposter" ${bg(sm(t.thumbnail_url, 'w185'))}></div><div class="ptx"><h2 class="ptitle">${esc(t.title)}</h2><p class="psyn" id="psyn">${esc(t.description || 'Belum ada sinopsis.')}</p><button class="plink" id="psynb" hidden>Lihat selengkapnya</button><div class="pchips">${String(t.genre || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 4).map(g => `<span>${esc(g)}</span>`).join('')}</div></div></div>
+<div class="pcard pacts"><span class="acts" data-acts></span></div>
+<div class="pcard"><b class="ph">Beri rating</b><div class="rate" id="rate"></div></div>
+${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas" id="pseas"></div><div class="pnum" id="eps"></div></section>' : ''}
+<div class="pcard pprog"><div class="pph"><span class="pico">${ic('pulse')}</span><b>Progress Menonton</b><span class="pbadge sm" id="pgEp"></span></div><div class="pbar"><i id="pgBar"></i></div><div class="pps"><span id="pgT">Ditonton</span><b id="pgPct">0%</b></div></div>
+</div>
+<div class="ppanel" id="pt-cm" hidden>${roomMode ? '' : '<section class="cchat glass" id="cchat"></section>'}</div>
+<div class="ppanel" id="pt-room" hidden><div id="rinfo"></div></div>
+</div>`;
         const vv = v = $('#vid');
         loadSrc(vv, vv.dataset.src);
         watchdog(vv);
+        frameGuard(vv);
+        try { vv.playsInline = true; vv.setAttribute('webkit-playsinline', ''); } catch (e) { }
         drawRate(id);
         // pilihan kualitas (muncul kalau judul/episode punya lebih dari 1 resolusi)
+        const setRes = (url, r) => {
+            if (url === curUrl) return;
+            if (r) localStorage.nm_res = r;
+            const was = !vv.paused, at = vv.currentTime;
+            suppress = true; // jangan kirim pause/seek ke room saat ganti kualitas
+            curUrl = url;
+            loadSrc(vv, curUrl, at);
+            vv.addEventListener('loadedmetadata', () => {
+                if (was) vv.play().catch(() => { });
+                setTimeout(() => suppress = false, 700);
+            }, { once: true });
+            drawRes();
+            np && np.refresh(false);
+        };
         const drawRes = () => {
             const box = $('#resrow'), it = curEp || t;
             if (!box) return;
             const s = (Array.isArray(it.sources) ? [...it.sources] : []).filter(x => resNum(x.res)).sort((a, b) => resNum(a.res) - resNum(b.res));
             box.innerHTML = s.length > 1 ? `<small>Kualitas</small>${s.map(x => `<button class="chip ${x.url === curUrl ? 'on' : ''}" data-u="${esc(x.url)}" data-r="${resNum(x.res)}">${esc(x.res)}</button>`).join('')}` : '';
-            box.querySelectorAll('.chip').forEach(b => b.onclick = () => {
-                if (b.dataset.u === curUrl) return;
-                localStorage.nm_res = b.dataset.r;
-                const was = !vv.paused, at = vv.currentTime;
-                suppress = true; // jangan kirim pause/seek ke room saat ganti kualitas
-                curUrl = b.dataset.u;
-                loadSrc(vv, curUrl, at);
-                vv.addEventListener('loadedmetadata', () => {
-                    if (was) vv.play().catch(() => { });
-                    setTimeout(() => suppress = false, 700);
-                }, { once: true });
-                drawRes();
-            });
+            box.querySelectorAll('.chip').forEach(b => b.onclick = () => setRes(b.dataset.u, b.dataset.r));
         };
         drawRes();
-        vv.addEventListener('error', () => vv._closed || toast('Video gagal dimuat. Cek link CDN: harus HTTPS, format mp4 (H.264) atau m3u8'));
-        saveFn = () => sb.from('history').upsert({
-            user_id: me.id,
-            title_id: id,
-            episode_id: curEp?.id || null,
-            progress: vv.currentTime || 0,
-            updated_at: new Date()
+        // ---- antarmuka bawah (portrait): kartu episode, sinopsis, daftar episode, progres ----
+        const durTxt = s => { s = Math.floor(s || 0); return s >= 3600 ? `${Math.floor(s / 3600)}j ${Math.floor(s % 3600 / 60)}m` : `${Math.floor(s / 60)}m ${s % 60}s`; };
+        const paintEpCard = () => {
+            const it = curEp || t, r = ratings[id], dt = it.created_at ? new Date(it.created_at) : null;
+            const d = dt && !isNaN(dt) ? dt.toLocaleDateString('id-ID') : (t.year || '');
+            const box = $('#pcEp'); if (!box) return;
+            box.innerHTML = `<span class="pbadge">${curEp ? 'Episode ' + curEp.number : (t.type === 'series' ? 'Series' : 'Film')}</span><h3 class="pet">${esc(curEp ? (curEp.name || 'Episode ' + curEp.number) : t.title)}</h3><div class="pmeta">${d ? `<span>${ic('calendar')} ${esc(d)}</span>` : ''}<span id="pmDur">${ic('clock')} ${vv.duration ? durTxt(vv.duration) : '--'}</span>${r ? `<span class="ps">${ic('star')} ${r.avg}</span>` : ''}<span class="vw" data-views="${id}">${viewsHtml(id)}</span></div>`;
+            const pe = $('#pgEp'); if (pe) pe.textContent = curEp ? 'Eps ' + curEp.number : (t.type === 'series' ? 'Series' : 'Film');
+        };
+        let curSeason = curEp ? curEp.season : 1;
+        const renderEps = () => {
+            const box = $('#eps'); if (!box) return;
+            if (curEp) curSeason = curEp.season;
+            const seasons = [...new Set(epList.map(e => e.season))];
+            $('#pseas').innerHTML = seasons.length > 1 ? seasons.map(s => `<button class="${s == curSeason ? 'on' : ''}" data-s="${s}">Musim ${s}</button>`).join('') : '';
+            box.innerHTML = epList.filter(e => e.season == curSeason).map(e => `<button class="${curEp && e.id == curEp.id ? 'on' : ''} ${dtEp(id, e, hist).done ? 'done' : ''}" data-e="${e.id}" aria-label="Episode ${e.number}">${e.number}</button>`).join('');
+        };
+        const paintProg = () => {
+            const d = vv.duration || 0, c = vv.currentTime || 0, p = d ? Math.min(100, c / d * 100) : 0;
+            const b = $('#pgBar'); if (!b) return;
+            b.style.width = p + '%';
+            $('#pgPct').textContent = Math.round(p) + '%';
+            $('#pgT').textContent = d ? `Ditonton ${fmtT(c)} / ${fmtT(d)}` : 'Ditonton';
+        };
+        paintEpCard(); renderEps();
+        if ($('#pseas')) $('#pseas').onclick = e => { const b = e.target.closest('[data-s]'); if (b) { curSeason = +b.dataset.s; renderEps(); } };
+        if ($('#eps')) $('#eps').onclick = e => {
+            const b = e.target.closest('[data-e]'); if (!b) return;
+            if (room && room.host_id !== me.id) return toast('Hanya host yang mengatur pemutaran');
+            window._sw(epList.find(x => x.id == b.dataset.e));
+            vv.play().catch(() => { });
+        };
+        let pgS = -1;
+        vv.addEventListener('timeupdate', () => { const s = Math.floor(vv.currentTime || 0); if (s !== pgS) { pgS = s; paintProg(); } });
+        vv.addEventListener('loadedmetadata', () => { const x = $('#pmDur'); if (x) x.innerHTML = `${ic('clock')} ${durTxt(vv.duration)}`; paintProg(); });
+        // sinopsis: potong 3 baris, tombol "Lihat selengkapnya" muncul kalau memang panjang
+        const syn = $('#psyn'), synb = $('#psynb');
+        if (syn && synb) {
+            if ((t.description || '').length > 120) synb.hidden = false;
+            synb.onclick = () => { const o = syn.classList.toggle('open'); synb.textContent = o ? 'Ringkas' : 'Lihat selengkapnya'; };
+        }
+        // tab Informasi / Komentar / Nobar
+        $('#ptabs').onclick = e => {
+            const b = e.target.closest('[data-pt]'); if (!b) return;
+            $('#ptabs').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+            ['info', 'cm', 'room'].forEach(k => { const p = $('#pt-' + k); if (p) p.hidden = k !== b.dataset.pt; });
+            if (b.dataset.pt === 'cm') { const l = $('#cc_l'); if (l) l.scrollTop = l.scrollHeight; }
+        };
+        // pemutar baru: kontrol custom di atas elemen <video>
+        ensureNmpSprite();
+        np = nmPlayer($('#nmp'), {
+            v: vv,
+            title: () => t.title,
+            poster: () => (curEp && curEp.thumbnail_url) || t.thumbnail_url || '',
+            srcs: () => { const it = curEp || t; return (Array.isArray(it.sources) ? [...it.sources] : []).filter(x => x && x.url && resNum(x.res)).sort((a, b) => resNum(a.res) - resNum(b.res)); },
+            curUrl: () => curUrl,
+            setRes: x => setRes(x.url, resNum(x.res)),
+            eps: () => epList,
+            curEp: () => curEp,
+            pickEp: e => { window._sw(e); vv.play().catch(() => { }); },
+            quiet: () => !(room && room.host_id !== me.id),
+            onBack: () => $('#fback').click(),
+            isSaved: () => !!(FS[id] && FS[id].saved),
+            toggleSave: () => actSave(id),
+            reload: at => { loadSrc(vv, curUrl, at); vv.play().catch(() => { }); }
         });
-        if (hist?.progress && (!curEp || curEp.id == hist.episode_id))
-            vv.addEventListener('loadedmetadata', () => vv.currentTime = hist.progress, { once: true });
+        filmState(id).then(() => np && np.paintMark()).catch(() => { });
+        vv.addEventListener('error', () => vv._closed || toast('Video gagal dimuat. Cek link CDN: harus HTTPS, format mp4 (H.264) atau m3u8'));
+        saveFn = () => dtSaveAll(id, curEp, vv);
+        {
+            const at = dtResumeAt(id, curEp, hist);
+            if (at > 0) vv.addEventListener('loadedmetadata', () => { vv.currentTime = at; }, { once: true });
+        }
         let last = 0;
         // hitung 1 tontonan + simpan riwayat begitu video benar-benar mulai diputar
         vv.addEventListener('playing', () => { recordView(id); saveFn && saveFn(); }, { once: true });
+        vv.addEventListener('ended', () => { dtSaveEp(id, curEp, vv.currentTime || 0, vv.duration || 0, true); saveFn && saveFn(); });
         refreshViews(id);
         vv.ontimeupdate = () => {
             if (Date.now() - last > 8000) {
@@ -3792,12 +4604,14 @@ async function openTitle(id, roomMode = false) {
             }
         };
         window._sw = (e, fromRoom) => {
+            saveFn && saveFn();
             curEp = e;
             curUrl = (pickSrc(e) || {}).url || e.video_url;
-            loadSrc(vv, curUrl);
+            loadSrc(vv, curUrl, fromRoom ? 0 : dtResume(id, e, hist));
             drawRes();
-            $('#epn').innerHTML = lbl();
-            m.querySelectorAll('#eps .item').forEach(x => x.classList.toggle('on', x.dataset.e == e.id));
+            paintEpCard();
+            renderEps();
+            np && np.refresh(true);
             saveFn && saveFn();
             if (!fromRoom && room && room.host_id === me.id)
                 sb.from('rooms').update({
@@ -3807,20 +4621,6 @@ async function openTitle(id, roomMode = false) {
                     updated_at: new Date()
                 }).eq('code', room.code);
         };
-        m.querySelectorAll('#eps .item').forEach(x => x.onclick = () => {
-            window._sw(epList.find(e => e.id == x.dataset.e));
-            vv.play().catch(() => { });
-        });
-        vv.addEventListener('ended', () => {
-            if (!curEp || localStorage.nm_auto === '0')
-                return;
-            const n = epList[epList.findIndex(e => e.id === curEp.id) + 1];
-            if (n) {
-                toast('Lanjut episode berikutnya');
-                window._sw(n);
-                vv.play().catch(() => { });
-            }
-        });
         filmActs(document.querySelector('#fplayer [data-acts]'), t);
         if (!roomMode) chatStart(document.getElementById('cchat'), t);
         if (roomMode)
@@ -3832,12 +4632,14 @@ async function openTitle(id, roomMode = false) {
     // lepas video + buffer supaya RAM kembali kosong
     const stopPlayer = () => {
         clearInterval(wd);
+        clearInterval(gd);
         chatStop();
+        if (np) { np.destroy(); np = null; }
         if (!v)
             return;
         if (saveFn)
             saveFn();
-        hist = { progress: v.currentTime || 0, episode_id: curEp?.id || null };
+        hist = { progress: v.currentTime || 0, episode_id: curEp?.id || null, duration: v.duration && isFinite(v.duration) ? v.duration : 0 };
         v._closed = true;
         v.ontimeupdate = null;
         if (hlsI) { hlsI.destroy(); hlsI = null; }
@@ -3847,13 +4649,15 @@ async function openTitle(id, roomMode = false) {
     };
     const showPlayer = () => {
         stage = 'player';
+        if (!roomMode && !(history.state && history.state.film === 2)) history.pushState({ film: 2 }, '');
         $('#finfo').hidden = true;
         $('#fplayer').hidden = false;
         m.scrollTop = 0;
         setBar();
         buildPlayer();
     };
-    const showInfo = () => {
+    const showInfo = fromPop => {
+        if (!fromPop && history.state && history.state.film === 2) { skipPop = true; history.back(); }
         stopPlayer();
         stage = 'info';
         $('#fplayer').hidden = true;
@@ -3878,11 +4682,20 @@ async function openTitle(id, roomMode = false) {
         document.documentElement.classList.remove('vid-open');
         window.fxPause && fxPause(false);
         filmClose = null;
+        filmPopFn = null;
         m.remove();
-        if (!fromPop && history.state && history.state.film)
-            history.back();
+        if (!fromPop && history.state && history.state.film) {
+            skipPop = true;
+            history.go(-history.state.film);
+        }
     };
     filmClose = closeFilm;
+    filmPopFn = () => { if (!roomMode && stage === 'player') showInfo(true); else closeFilm(true); };
+    const fbar = m.querySelector('.fbar');
+    m.addEventListener('scroll', () => fbar.classList.toggle('solid', m.scrollTop > 120), { passive: true });
+    $('#flike').dataset.id = id;
+    $('#flike').onclick = () => actLike(id, $('#flike'));
+    $('#fshare').onclick = () => dtShare(t);
     $('#fback').onclick = () => (!roomMode && stage === 'player') ? showInfo() : closeFilm();
     $('#cl').onclick = () => closeFilm();
     setBar();
@@ -4833,7 +5646,7 @@ async function pool(items, n, fn) {
 }
 
 // ---- proses import ----
-let impReport = '';
+let impReport = '', impOk = false, impPre = '', impBack = 'imp';
 
 function prog(p, msg) {
     const el = $('#imp_prog');
@@ -4847,17 +5660,26 @@ async function refreshTitles() {
     titles = data || [];
 }
 
+async function impDone(o, msg) {
+    impOk = true;
+    if (o.onOk) { try { await o.onOk(); } catch (e) { } }
+    return finishImport(msg);
+}
+
 async function finishImport(msg) {
+    if (impPre) { msg = impPre + msg; impPre = ''; }
     impReport = msg;
     await refreshTitles();
-    if (tab === 'admin') await views.admin('imp');
+    const back = impBack; impBack = 'imp';
+    if (tab === 'admin') await views.admin(back);
     toast(msg.split('\n')[0]);
 }
 
 async function runImport(rows, o = {}) {
+    impOk = false;
     const fresh = [], dups = [];
     rows.forEach(r => (isDup(titles, r) || isDup(fresh, r) ? dups : fresh).push(r));
-    if (!fresh.length) return finishImport('Semua judul sudah ada di katalog, tidak ada yang ditambahkan.');
+    if (!fresh.length) return impDone(o, 'Semua judul sudah ada di katalog, tidak ada yang ditambahkan.');
 
     let poster = 0, n = 0;
     if (o.tmdb !== false) {
@@ -4905,7 +5727,7 @@ async function runImport(rows, o = {}) {
     const bits = [`${nTitle} judul masuk (${nTitle - nSeries} film, ${nSeries} series, ${nEp} episode)`];
     if (o.tmdb !== false) bits.push(`${poster} poster dari TMDB${poster < nTitle ? `, ${nTitle - poster} pakai gambar bawaan / kosong` : ''}`);
     if (dups.length) bits.push(`${dups.length} dilewati karena sudah ada: ${dups.slice(0, 8).map(r => r.title).join(', ')}${dups.length > 8 ? '…' : ''}`);
-    return finishImport(bits.join('\n'));
+    return impDone(o, bits.join('\n'));
 }
 
 async function bulk(j) {
@@ -4983,6 +5805,244 @@ const impTab = () => `<div class="glass pad"><b>Import katalog (.json)</b><p cla
 ${impReport ? `<div class="glass pad"><b>Hasil import terakhir</b><p class="hint" style="white-space:pre-line">${esc(impReport)}</p></div>` : ''}
 <div class="glass pad"><b>Poster otomatis (TMDB)</b><p class="hint">Saat import, poster, sinopsis, genre, dan tahun diambil dari TMDB berdasarkan judul. Untuk judul lama yang posternya masih kosong:</p><button class="btn ghost" style="width:100%" onclick="tmdbBackfill()">${ic('sparkle')} Cari poster untuk ${titles.filter(t => !t.thumbnail_url).length} judul kosong</button></div>
 <div class="glass pad"><b>Dari API</b><input id="j_u" placeholder="URL API (array JSON)"><button class="btn ghost" style="width:100%" onclick="importApi()">Import dari API</button></div><div class="glass pad"><b>Tempel JSON</b><p class="hint">Tempel isi JSON berisi link CDN. Tidak perlu simpan file di HP / PC.</p><textarea id="j_t" placeholder='[{"title":"Judul","video_url":"https://cdn.../film.m3u8"}]'></textarea><button class="btn ghost" style="width:100%" onclick="importText()">Import dari teks</button></div><div class="glass pad"><b>Dari file .json (cepat)</b><p class="hint">Langsung import tanpa ringkasan. Kunci yang dikenali: title/judul/name, video_url/url/link, sources:[{res,url}], poster/thumbnail, description, year, genre, category, dan episodes:[{season,number,name,video_url}] untuk series.</p><input id="j_f" type="file" accept=".json" onchange="importFile(this)"></div>`;
+
+// ===== upload JSON film: ambil nama, thumbnail, link film, resolusi =====
+// File JSON disimpan sementara di tabel Supabase "json_queue", dibaca, lalu otomatis dihapus setelah film masuk.
+const JQ_SQL = `create table if not exists public.json_queue (
+  id bigint generated always as identity primary key,
+  filename text,
+  content jsonb not null,
+  created_by uuid default auth.uid(),
+  created_at timestamptz not null default now()
+);
+alter table public.json_queue enable row level security;
+create policy "jq_admin_all" on public.json_queue for all
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'))
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));`;
+const JQ_LADDER = [144, 240, 540, 720, 1080];
+let jqHas = null, jqBusy = false, jqFiles = [];
+
+// pilih banyak file sekaligus; pilihan berikutnya ditambahkan ke daftar, bukan menimpa
+function jqPick(inp) {
+    [...inp.files].forEach(f => { if (!jqFiles.some(x => x.name === f.name && x.size === f.size)) jqFiles.push(f); });
+    inp.value = '';
+    jqShow();
+}
+function jqRemove(i) { jqFiles.splice(i, 1); jqShow(); }
+function jqClear() { jqFiles = []; jqShow(); }
+function jqShow() {
+    const box = $('#jq_sel');
+    if (!box) return;
+    box.innerHTML = jqFiles.length
+        ? `<p class="hint"><b>${jqFiles.length}</b> file dipilih · <a href="#" onclick="jqClear();return false">kosongkan</a></p><div class="implist">${jqFiles.map((f, i) => `<div class="impit"><b>${esc(f.name)}</b><small>${Math.max(1, Math.round(f.size / 1024))} KB · <a href="#" onclick="jqRemove(${i});return false">hapus</a></small></div>`).join('')}</div>`
+        : '';
+}
+
+const jqMissing = e => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|schema cache|json_queue/i.test(e.message || ''));
+
+// satu file bisa: 1 objek episode, array episode, atau objek berisi array (data / episodes / ...)
+function jqRecords(j) {
+    const isRec = o => !!o && typeof o === 'object' && !Array.isArray(o) && (Array.isArray(o.qualities) || !!o.source_quality);
+    if (isRec(j)) return [j];
+    if (j && isRec(j.data)) return [j.data];
+    const arr = toArr(j);
+    return Array.isArray(arr) ? arr.filter(isRec) : [];
+}
+
+// resolusi otomatis: 144p, 240p, 540p, 720p ... sampai resolusi tertinggi yang ada di JSON
+function jqLadder(list, on) {
+    const seen = new Set(), real = [];
+    list.forEach(s => {
+        const url = String((s && s.url) || '').trim();
+        if (!okUrl(url) || seen.has(url)) return;
+        seen.add(url);
+        const n = resNum(s.res);
+        real.push({ res: n ? n + 'p' : String(s.res || 'Auto'), url });
+    });
+    const asc = (a, b) => resNum(a.res) - resNum(b.res);
+    const nums = real.filter(s => resNum(s.res)).sort(asc);
+    if (!on || !nums.length) return real.sort(asc);
+    const max = resNum(nums[nums.length - 1].res), out = [...real];
+    JQ_LADDER.filter(r => r <= max && !nums.some(s => resNum(s.res) === r)).forEach(r => {
+        const base = nums.find(s => resNum(s.res) >= r) || nums[nums.length - 1];
+        out.push({ res: r + 'p', url: base.url + '#q' + r + 'p' }); // fragmen #qXXXp tidak mengubah file, hanya supaya tiap pilihan kualitas punya link unik
+    });
+    return out.sort(asc);
+}
+
+function jqBuild(records, o) {
+    const groups = new Map();
+    records.forEach(x => {
+        const an = x.anime || {};
+        const src = (Array.isArray(x.qualities) ? x.qualities : []).map(q => ({ res: q && q.nama_quality, url: q && q.source_quality }));
+        if (!src.length && x.source_quality) src.push({ res: x.nama_quality, url: x.source_quality });
+        const sources = jqLadder(src, o.ladder);
+        if (!sources.length) return;
+        const raw = String(an.nama_anime || x.anime_title || x.nama_anime || '').trim() || guessTitle(src.find(s => okUrl(s.url)).url);
+        const key = x.anime_id != null ? 'id:' + x.anime_id : 'n:' + raw.toLowerCase();
+        let g = groups.get(key);
+        if (!g) groups.set(key, g = { raw, cover: okUrl(an.gambar_anime) ? String(an.gambar_anime).trim() : null, eps: [] });
+        const th = x.thumbnail_episode;
+        g.eps.push({
+            season: 1,
+            number: +x.nomor_episode || g.eps.length + 1,
+            name: x.judul_episode ? String(x.judul_episode).slice(0, 200) : null,
+            thumb: okUrl(th) ? String(th).trim() : null,
+            sources
+        });
+    });
+    return [...groups.values()].map(g => {
+        const seen = new Set();
+        const eps = g.eps.filter(e => { const k = e.season + '-' + e.number; if (seen.has(k)) return false; seen.add(k); return true; }).sort((a, b) => a.number - b.number);
+        const series = eps.length > 1, sp = splitTitle(g.raw);
+        return {
+            title: sp.title, guessed: false, year: sp.year, genre: null, category: o.category || null,
+            type: series ? 'series' : 'movie', description: null,
+            sources: series ? [] : eps[0].sources, episodes: series ? eps : [], _eps: eps,
+            thumbnail_url: series ? (g.cover || eps[0].thumb) : (eps[0].thumb || g.cover),
+            fallbackThumb: null, tmdb_id: null, created_at: null,
+            video_url: series ? null : pickSrc({ sources: eps[0].sources }, 1080).url
+        };
+    });
+}
+
+// episode baru untuk series yang sudah ada di katalog
+async function jqAppend(ex, r) {
+    const { data, error } = await sb.from('episodes').select('season,number').eq('title_id', ex.id);
+    if (error) throw error;
+    const have = new Set((data || []).map(e => e.season + '-' + e.number));
+    const eps = r._eps.filter(e => !have.has(e.season + '-' + e.number));
+    if (eps.length) {
+        const r2 = await sb.from('episodes').insert(eps.map(e => ({
+            title_id: ex.id, season: e.season, number: e.number, name: e.name,
+            video_url: pickSrc({ sources: e.sources }, 1080).url, thumbnail_url: e.thumb, sources: e.sources
+        })));
+        if (r2.error) throw r2.error;
+    }
+    return { added: eps.length, skipped: r._eps.length - eps.length };
+}
+
+const jqOn = id => { const s = $(id); return !s || s.classList.contains('on'); };
+const jqOpts = () => ({ tmdb: jqOn('#jq_tm'), ladder: jqOn('#jq_lad'), category: ($('#jq_cat') || {}).value || null });
+const jqNames = a => a.slice(0, 5).join(', ') + (a.length > 5 ? '…' : '');
+
+// items: [{name, json, qid}]
+async function jqProcess(items, o, bad = []) {
+    jqBusy = true;
+    impBack = 'jq';
+    impPre = '';
+    try {
+        const ids = [], dead = [], empty = [];
+        let records = [];
+        items.forEach(it => {
+            const r = jqRecords(it.json);
+            if (r.length) { records.push(...r); if (it.qid) ids.push(it.qid); }
+            else { empty.push(it.name); if (it.qid) dead.push(it.qid); }
+        });
+        if (dead.length && jqHas !== false) await sb.from('json_queue').delete().in('id', dead);
+        if (bad.length) impPre += `${bad.length} file bukan JSON valid: ${jqNames(bad)}\n`;
+        if (empty.length) impPre += `${empty.length} file tidak berisi data film (tidak ada source_quality): ${jqNames(empty)}\n`;
+
+        const rows = jqBuild(records, o);
+        if (!rows.length) {
+            if (ids.length && jqHas !== false) await sb.from('json_queue').delete().in('id', ids);
+            return finishImport('Tidak ada film yang bisa ditambahkan.');
+        }
+
+        const fresh = [], notes = [];
+        let eAdd = 0, eSkip = 0;
+        for (const r of rows) {
+            const ex = titles.find(t => t.title.toLowerCase() === r.title.toLowerCase() && (!t.year || !r.year || t.year === r.year));
+            if (ex && ex.type === 'series') { const a = await jqAppend(ex, r); eAdd += a.added; eSkip += a.skipped; notes.push(ex.title); }
+            else fresh.push(r);
+        }
+        if (notes.length) impPre += `${eAdd} episode ditambahkan ke series yang sudah ada (${jqNames(notes)})${eSkip ? `, ${eSkip} episode dilewati karena sudah ada` : ''}\n`;
+
+        const onOk = async () => {
+            if (!ids.length || jqHas === false) return;
+            const { error } = await sb.from('json_queue').delete().in('id', ids);
+            if (!error) impPre += `${ids.length} file JSON sudah diambil isinya dan otomatis dihapus dari antrean\n`;
+        };
+        if (fresh.length) return await runImport(fresh, { tmdb: o.tmdb, onOk });
+        impOk = true;
+        await onOk();
+        await refreshTitles();
+        return finishImport('Tidak ada judul baru, semua sudah ada di katalog.');
+    } catch (e) {
+        impPre += 'File JSON tetap disimpan di antrean, bisa diproses ulang.\n';
+        return finishImport('Gagal: ' + (e.message || e));
+    } finally {
+        jqBusy = false;
+    }
+}
+
+async function jqRun() {
+    if (jqBusy) return;
+    const files = [...jqFiles];
+    if (!files.length) return toast('Pilih file JSON dulu');
+    jqBusy = true;
+    jqFiles = [];
+    const o = jqOpts(), items = [], bad = [];
+    prog(.02, 'Membaca file…');
+    for (const f of files) {
+        try { items.push({ name: f.name, json: JSON.parse(await f.text()) }); } catch (e) { bad.push(f.name); }
+    }
+    if (jqHas !== false) {
+        for (const it of items) {
+            const { data, error } = await sb.from('json_queue').insert({ filename: it.name, content: it.json }).select('id').single();
+            if (error) { if (jqMissing(error)) { jqHas = false; break; } } else it.qid = data.id;
+        }
+    }
+    jqBusy = false;
+    if (!items.length) { impPre = ''; return toast('Tidak ada file JSON yang valid'); }
+    await jqProcess(items, o, bad);
+}
+
+async function jqRetry(id) {
+    if (jqBusy) return;
+    let q = sb.from('json_queue').select('id,filename,content');
+    q = id ? q.eq('id', id) : q;
+    const { data, error } = await q;
+    if (error) return toast(error.message);
+    if (!data.length) return toast('Antrean kosong');
+    prog(.02, 'Menyiapkan…');
+    await jqProcess(data.map(d => ({ name: d.filename, json: d.content, qid: d.id })), jqOpts(), []);
+}
+
+async function jqDel(id) {
+    if (!confirm('Hapus file ini dari antrean tanpa diproses?')) return;
+    const { error } = await sb.from('json_queue').delete().eq('id', id);
+    if (error) return toast(error.message);
+    jqLoad();
+}
+
+async function jqLoad() {
+    const box = $('#jq_list');
+    if (!box) return;
+    const { data, error } = await sb.from('json_queue').select('id,filename,created_at').order('created_at');
+    if (error) {
+        if (jqMissing(error)) {
+            jqHas = false;
+            box.innerHTML = `<p class="hint">Tabel <b>json_queue</b> belum ada di Supabase. Upload tetap jalan, tapi file tidak disimpan di database. Jalankan SQL ini sekali di SQL Editor, lalu muat ulang tab ini.</p><pre>${esc(JQ_SQL)}</pre><button class="btn sm ghost" style="margin-top:8px" onclick="navigator.clipboard.writeText(JQ_SQL).then(()=>toast('SQL disalin'))">${ic('copy')} Salin SQL</button>`;
+        } else box.innerHTML = `<p class="hint">${esc(error.message)}</p>`;
+        return;
+    }
+    jqHas = true;
+    box.innerHTML = data.length
+        ? `<p class="hint">File yang belum berhasil diproses. File yang sukses langsung terhapus sendiri.</p>${data.map(d => `<div class="impit"><b>${esc(d.filename || 'file.json')}</b><span><button class="btn sm ghost" onclick="jqRetry(${d.id})">Proses</button> <button class="btn sm danger" onclick="jqDel(${d.id})">Hapus</button></span></div>`).join('')}<button class="btn sm glow" style="margin-top:8px" onclick="jqRetry()">Proses semua</button>`
+        : '<p class="hint">Antrean kosong. Semua file sudah diproses.</p>';
+}
+
+const jqSw = (id, t, s, on = true) => `<div class="srow"><span>${t}<small>${s}</small></span><button class="sw ${on ? 'on' : ''}" id="${id}" role="switch" aria-checked="${on}" onclick="this.classList.toggle('on');this.setAttribute('aria-checked',this.classList.contains('on'))"></button></div>`;
+
+const jqTab = () => `<div class="glass pad"><b>Upload JSON film</b><p class="hint">Pilih satu atau beberapa file .json. Nama, thumbnail, link film, dan resolusi diambil otomatis, lalu file JSON dihapus setelah filmnya masuk. Tab Tambah dan Episode manual tetap ada.</p><input id="jq_f" type="file" accept=".json,application/json" multiple onchange="jqPick(this)"><div id="jq_sel"></div>
+<label class="fld"><span>Kategori</span><select id="jq_cat"><option value="film">Film</option><option value="anime">Anime</option><option value="">Kosong</option></select></label>
+${jqSw('jq_lad', 'Resolusi otomatis', '144p, 240p, 540p, 720p sampai resolusi tertinggi di JSON')}
+${jqSw('jq_tm', 'Lengkapi dari TMDB', 'Sinopsis, genre, dan tahun diisi otomatis. Thumbnail dari JSON tidak diganti')}
+<button class="btn glow" style="width:100%" onclick="jqRun()">Upload dan proses</button></div>
+<div class="glass pad" id="imp_prog" hidden></div>
+${impReport ? `<div class="glass pad"><b>Hasil terakhir</b><p class="hint" style="white-space:pre-line">${esc(impReport)}</p></div>` : ''}
+<div class="glass pad"><b>Antrean JSON</b><div id="jq_list"><p class="hint">Memuat…</p></div></div>`;
 
 async function addEp() {
     try {
@@ -5762,6 +6822,360 @@ function liveStart() {
             _debounce('l' + r.title_id, () => filmState(r.title_id).then(() => actsPaint(r.title_id)).catch(() => { }));
         })
         .subscribe();
+}
+</script>
+<script>
+/* ===== NauMovie · halaman detail + alur pemutar =====
+   Sistem: progres per episode, subscribe + notifikasi episode baru, share, unduh,
+   daftar episode (cari / urut / grid), edit info judul (admin).
+   Semua tersambung ke Supabase; kalau tabel/kolom baru belum ada, fitur terkait
+   menampilkan pesan jelas dan sisa aplikasi tetap jalan. */
+
+Object.assign(P, {
+    share: 'M18 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 22a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.6 13.5l6.8 4M15.4 6.5l-6.8 4',
+    bell: 'M6 9a6 6 0 0 1 12 0c0 6 2 7 2 7H4s2-1 2-7zM10 20a2 2 0 0 0 4 0',
+    chev: 'M6 15l6-6 6 6',
+    grid: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+    list: 'M4 6h16M4 12h16M4 18h16',
+    verified: 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM8 12l3 3 5-6'
+});
+
+const DAYS = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+const dtK = n => { n = Number(n) || 0; return n >= 1e6 ? (n / 1e6).toFixed(1).replace(/\.0$/, '') + 'M' : n >= 1e3 ? (n / 1e3).toFixed(1).replace(/\.0$/, '') + 'k' : String(n); };
+const dtDate = v => { if (!v) return ''; const d = new Date(v); return isNaN(d) ? '' : d.toLocaleDateString('id-ID', { day: '2-digit', month: '2-digit', year: 'numeric' }); };
+const dtDur = s => { s = Math.round(s || 0); if (!s) return ''; const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60); return h ? `${h}j ${m}m` : `${Math.max(1, Math.round(s / 60))}m`; };
+const lsg = (k, d) => { try { return localStorage.getItem(k) || d; } catch (e) { return d; } };
+const lss = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { } };
+
+/* ---------------- progres per episode ---------------- */
+const EPG = {};   // titleId -> { episodeId: baris episode_progress }
+const SUBS = {};  // titleId -> baris subscriptions | null
+let EP_OK = true, HIST_DUR = true, SUB_OK = true;
+
+async function dtLoad(id) {
+    const [a, b] = await Promise.all([
+        sb.from('episode_progress').select('episode_id,progress,duration,completed,updated_at').eq('user_id', me.id).eq('title_id', id),
+        sb.from('subscriptions').select('title_id,seen_at').eq('user_id', me.id).eq('title_id', id).maybeSingle()
+    ]);
+    const rows = {};
+    EP_OK = !a.error;
+    if (!a.error) (a.data || []).forEach(r => { rows[r.episode_id] = r; });
+    EPG[id] = rows;
+    SUB_OK = !(b.error && /subscriptions|relation|schema cache|does not exist/i.test(b.error.message || ''));
+    SUBS[id] = b.error ? null : (b.data || null);
+}
+
+// status satu episode: dari episode_progress, atau dari riwayat lama kalau barisnya belum ada
+function dtEp(id, e, hist) {
+    const r = (EPG[id] || {})[e.id];
+    const dur = (r && r.duration) || e.duration || 0;
+    let prog = r ? (r.progress || 0) : 0;
+    const done = !!(r && r.completed);
+    if (!r && hist && hist.episode_id == e.id && hist.progress > 5) prog = hist.progress;
+    const pct = done ? 100 : dur ? Math.min(99, Math.round(prog / dur * 100)) : 0;
+    return { prog, dur, done, pct, started: done || prog > 5 };
+}
+
+function dtEpText(x) {
+    if (x.done) return 'Selesai';
+    if (!x.started) return 'Belum ditonton';
+    return x.dur ? `Ditonton ${x.pct}% · ${fmtT(x.prog)}` : `Ditonton ${fmtT(x.prog)}`;
+}
+
+function dtOverall(t, eps, hist) {
+    if (eps.length) {
+        let s = 0;
+        eps.forEach(e => { const x = dtEp(t.id, e, hist); s += x.done ? 1 : x.pct / 100; });
+        return Math.round(s / eps.length * 100);
+    }
+    if (hist && hist.progress > 5 && hist.duration) return Math.min(100, Math.round(hist.progress / hist.duration * 100));
+    return 0;
+}
+
+// episode yang akan diputar oleh tombol Tonton
+function dtTarget(t, eps, hist) {
+    if (!eps.length) return null;
+    const rows = EPG[t.id] || {};
+    const prog = eps.map(e => ({ e, x: dtEp(t.id, e, hist), at: rows[e.id] ? new Date(rows[e.id].updated_at).getTime() : 0 }))
+        .filter(o => o.x.started && !o.x.done).sort((a, b) => b.at - a.at);
+    if (prog.length) return { e: prog[0].e, mode: 'resume' };
+    let last = -1;
+    eps.forEach((e, i) => { if (dtEp(t.id, e, hist).done) last = i; });
+    if (last < 0) return { e: eps[0], mode: 'start' };
+    if (last < eps.length - 1) return { e: eps[last + 1], mode: 'next' };
+    return { e: eps[0], mode: 'replay' };
+}
+
+// posisi mulai saat sebuah episode dibuka (0 = dari awal)
+function dtResume(id, e, hist) {
+    const x = dtEp(id, e, hist);
+    if (x.done || (x.dur && x.prog > x.dur * .92)) return 0;
+    return x.prog > 5 ? Math.max(0, x.prog - 2) : 0;
+}
+
+function dtResumeAt(id, e, hist) {
+    if (e) return dtResume(id, e, hist);
+    if (!hist || !(hist.progress > 5)) return 0;
+    return hist.duration && hist.progress > hist.duration * .95 ? 0 : hist.progress;
+}
+
+// simpan progres episode. cur/dur dikirim sebagai angka supaya aman saat video sudah dilepas
+function dtSaveEp(titleId, e, cur, dur, forceDone) {
+    if (!EP_OK || !e) return;
+    const rows = EPG[titleId] || (EPG[titleId] = {});
+    const prev = rows[e.id];
+    const done = !!(forceDone || (prev && prev.completed) || (dur && cur / dur >= .92));
+    if (cur < 3 && !done && !prev) return;
+    const row = { episode_id: e.id, progress: cur, duration: dur || (prev && prev.duration) || 0, completed: done, updated_at: new Date().toISOString() };
+    rows[e.id] = row;
+    sb.from('episode_progress').upsert({ user_id: me.id, title_id: titleId, ...row }).then(r => { if (r.error) EP_OK = false; }, () => { });
+    if (me.role === 'admin' && dur && !e.duration) {
+        e.duration = Math.round(dur);
+        sb.from('episodes').update({ duration: e.duration }).eq('id', e.id).then(() => { }, () => { });
+    }
+}
+
+// dipanggil tiap 8 detik, saat pindah episode, dan saat pemutar ditutup
+async function dtSaveAll(id, e, vv) {
+    const cur = vv.currentTime || 0, dur = vv.duration && isFinite(vv.duration) ? vv.duration : 0;
+    const payload = { user_id: me.id, title_id: id, episode_id: e ? e.id : null, progress: cur, updated_at: new Date() };
+    if (HIST_DUR && dur) payload.duration = dur;
+    dtSaveEp(id, e, cur, dur, false);
+    let { error } = await sb.from('history').upsert(payload);
+    if (error && 'duration' in payload && /duration/i.test(error.message)) {
+        HIST_DUR = false; delete payload.duration;
+        ({ error } = await sb.from('history').upsert(payload));
+    }
+    return { error };
+}
+
+/* ---------------- subscribe ---------------- */
+async function dtSub(id) {
+    if (!SUB_OK) return toast('Fitur subscribe belum aktif. Jalankan SQL migrasi di Supabase dulu.');
+    const was = !!SUBS[id];
+    const { error } = was
+        ? await sb.from('subscriptions').delete().eq('user_id', me.id).eq('title_id', id)
+        : await sb.from('subscriptions').insert({ title_id: id });
+    if (error && !/duplicate/i.test(error.message)) return toast(error.message);
+    SUBS[id] = was ? null : { title_id: id, seen_at: new Date().toISOString() };
+    toast(was ? 'Berhenti berlangganan' : 'Berlangganan. Kamu akan diberi tahu saat ada episode baru.');
+    return true;
+}
+
+// saat aplikasi dibuka: kabari kalau judul langganan punya episode baru
+async function subCheck() {
+    try {
+        const { data: subs, error } = await sb.from('subscriptions').select('title_id,seen_at').eq('user_id', me.id);
+        if (error || !subs || !subs.length) return;
+        const since = subs.reduce((m, s) => new Date(s.seen_at) < new Date(m) ? s.seen_at : m, subs[0].seen_at);
+        const { data: eps } = await sb.from('episodes').select('title_id,created_at').in('title_id', subs.map(s => s.title_id)).gt('created_at', since);
+        const seen = Object.fromEntries(subs.map(s => [s.title_id, s.seen_at]));
+        const fresh = [...new Set((eps || []).filter(e => new Date(e.created_at) > new Date(seen[e.title_id])).map(e => e.title_id))];
+        if (!fresh.length) return;
+        const t = titles.find(x => x.id == fresh[0]);
+        toast(fresh.length > 1 ? `${fresh.length} judul langgananmu punya episode baru` : `Episode baru: ${t ? t.title : 'judul langgananmu'}`);
+    } catch (e) { }
+}
+
+/* ---------------- share & unduh ---------------- */
+async function dtShare(t) {
+    const url = `${location.origin}${location.pathname}?t=${t.id}`;
+    try { if (navigator.share) { await navigator.share({ title: t.title, text: `Nonton ${t.title} di NauMovie`, url }); return; } }
+    catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(url); toast('Link disalin'); }
+    catch (e) { prompt('Salin link ini:', url); }
+}
+
+function dtDownload(t, e) {
+    const u = (pickSrc(e) || {}).url || e.video_url;
+    if (!u) return toast('Sumber video belum tersedia');
+    if (/\.m3u8(\?|#|$)/i.test(u)) return toast('Episode ini berformat streaming (m3u8), belum bisa diunduh');
+    const a = document.createElement('a');
+    a.href = u; a.target = '_blank'; a.rel = 'noopener'; a.download = `${t.title} - Ep ${e.number}.mp4`;
+    document.body.appendChild(a); a.click(); a.remove();
+    toast(`Membuka unduhan Ep ${e.number}`);
+}
+
+/* ---------------- sinkron ikon header & chip live ---------------- */
+function dtPaintHeart(id) {
+    const b = document.getElementById('flike');
+    if (!b || b.dataset.id != id) return;
+    const st = FS[id];
+    b.classList.toggle('on', !!(st && st.liked));
+    b.setAttribute('aria-pressed', st && st.liked ? 'true' : 'false');
+}
+{
+    const _ap = actsPaint; actsPaint = function (id) { _ap(id); dtPaintHeart(id); };
+    const _pv = paintViews; paintViews = function (id) { _pv(id); document.querySelectorAll(`[data-dtv="${id}"]`).forEach(el => { el.innerHTML = `${ic('eye')} ${dtK(vcount[id])}`; }); };
+    const _pr = paintRating; paintRating = function (id) { _pr(id); document.querySelectorAll(`[data-dtr="${id}"]`).forEach(el => { el.innerHTML = `${ic('star')} ${ratings[id] ? ratings[id].avg : 'N/A'}`; }); };
+}
+
+/* ---------------- edit info judul (admin) ---------------- */
+function dtEdit(t, done) {
+    const old = document.getElementById('dted'); if (old) old.remove();
+    const m = document.createElement('div');
+    m.className = 'modal'; m.id = 'dted';
+    m.setAttribute('role', 'dialog'); m.setAttribute('aria-modal', 'true'); m.setAttribute('aria-label', 'Edit info judul');
+    const v = k => esc(t[k] ?? '');
+    const st = String(t.status || '');
+    m.innerHTML = `<div class="sheet glass pad"><h2>${ic('tool')} Edit info judul</h2>
+<div class="dt-fld"><label for="ed_studio">Studio</label><input id="ed_studio" maxlength="80" value="${v('studio')}"></div>
+<div class="dt-fld"><label for="ed_label">Label</label><input id="ed_label" maxlength="30" placeholder="TV, Movie, OVA" value="${v('label')}"></div>
+<div class="dt-fld"><label for="ed_tags">Tags (pisahkan koma)</label><input id="ed_tags" maxlength="200" value="${v('tags')}"></div>
+<div class="dt-fld"><label for="ed_rel">Tanggal rilis</label><input id="ed_rel" type="date" value="${esc(String(t.release_date || '').slice(0, 10))}"></div>
+<div class="dt-fld"><label for="ed_st">Status</label><select id="ed_st"><option value="">Belum diatur</option><option value="ongoing" ${st === 'ongoing' ? 'selected' : ''}>Ongoing</option><option value="completed" ${st === 'completed' ? 'selected' : ''}>Tamat</option><option value="upcoming" ${st === 'upcoming' ? 'selected' : ''}>Segera tayang</option></select></div>
+<div class="dt-fld"><label for="ed_day">Hari tayang</label><select id="ed_day"><option value="">Tidak ada</option>${DAYS.map((d, i) => `<option value="${i}" ${t.air_day != null && t.air_day !== '' && +t.air_day === i ? 'selected' : ''}>${d}</option>`).join('')}</select></div>
+<div class="dt-fld"><label for="ed_time">Jam tayang (WIB)</label><input id="ed_time" type="time" value="${esc(String(t.air_time || '').slice(0, 5))}"></div>
+<div class="libfoot"><button class="btn sm ghost" id="ed_x">Batal</button><button class="btn sm" id="ed_ok">Simpan</button></div></div>`;
+    document.body.appendChild(m);
+    const close = () => m.remove();
+    m.onclick = e => { if (e.target === m) close(); };
+    m.querySelector('#ed_x').onclick = close;
+    m.querySelector('#ed_ok').onclick = async () => {
+        const g = s => m.querySelector(s).value.trim();
+        const patch = {
+            studio: g('#ed_studio') || null, label: g('#ed_label') || null, tags: g('#ed_tags') || null,
+            release_date: g('#ed_rel') || null, status: g('#ed_st') || null,
+            air_day: g('#ed_day') === '' ? null : +g('#ed_day'), air_time: g('#ed_time') || null
+        };
+        const btn = m.querySelector('#ed_ok'); btn.disabled = true;
+        const { error } = await sb.from('titles').update(patch).eq('id', t.id);
+        btn.disabled = false;
+        if (error) return toast(/column|schema cache/i.test(error.message) ? 'Kolom baru belum ada. Jalankan SQL migrasi di Supabase dulu.' : error.message);
+        Object.assign(t, patch);
+        close(); toast('Info judul disimpan'); done();
+    };
+}
+
+/* ---------------- render halaman detail ---------------- */
+let DTS = { id: null, q: '', season: null, open: true, view: 'list', sort: 'new' };
+
+function dtRender(c) {
+    const { t, id, isS, root } = c, eps = c.eps(), hist = c.hist();
+    if (DTS.id !== id) DTS = { id, q: '', season: null, open: true, view: lsg('nm_epv', 'list'), sort: lsg('nm_eps', 'new') };
+    const tgt = isS ? dtTarget(t, eps, hist) : null;
+    if (DTS.season == null) DTS.season = tgt ? tgt.e.season : (eps[0] ? eps[0].season : 1);
+
+    const tm = t._tm && Number(t._tm.rating) > 0 ? Number(t._tm.rating).toFixed(1) : '';
+    const rv = ratings[id] ? ratings[id].avg : (tm || 'N/A');
+    const st = String(t.status || '').toLowerCase();
+    const stTxt = { ongoing: 'ONGOING', completed: 'TAMAT', upcoming: 'SEGERA' }[st] || '';
+    const rel = dtDate(t.release_date) || (t.year ? String(t.year) : '');
+    const hasDay = t.air_day != null && t.air_day !== '';
+    const sched = hasDay ? `${DAYS[+t.air_day] || ''}${t.air_time ? ', ' + String(t.air_time).slice(0, 5) : ''} WIB` : (t.air_time ? `${String(t.air_time).slice(0, 5)} WIB` : '');
+    const chips = [
+        `<span class="dt-chip s" data-dtr="${id}">${ic('star')} ${esc(rv)}</span>`,
+        `<span class="dt-chip" data-dtv="${id}">${ic('eye')} ${dtK(vcount[id])}</span>`,
+        rel ? `<span class="dt-chip">${ic('calendar')} ${esc(rel)}</span>` : '',
+        stTxt ? `<span class="dt-chip st-${esc(st)}">${ic('verified')} ${stTxt}</span>` : '',
+        sched && st !== 'completed' ? `<span class="dt-chip">${ic('clock')} ${esc(sched)}</span>` : ''
+    ].join('');
+
+    // tombol Tonton
+    const movieProg = !isS && hist && hist.progress > 5 ? hist.progress : 0;
+    const url = isS ? (tgt ? c.url(tgt.e) : '') : c.movieUrl();
+    const label = !url ? 'Video belum tersedia'
+        : isS ? ({ resume: `Lanjut Ep ${tgt.e.number}`, next: `Tonton Ep ${tgt.e.number}`, start: `Tonton Ep ${tgt.e.number}`, replay: 'Tonton ulang' }[tgt.mode])
+            : (movieProg ? `Lanjut ${fmtT(movieProg)}` : 'Tonton');
+    const subOn = !!SUBS[id];
+
+    // progres
+    const pct = dtOverall(t, eps, hist);
+    const doneN = eps.filter(e => dtEp(id, e, hist).done).length;
+
+    const desc = t.description ? esc(t.description) : (c.loading ? 'Mengambil sinopsis dari TMDB...' : 'Belum ada sinopsis.');
+    const row = (k, v) => `<dt>${k}</dt><dd>${v ? esc(v) : '-'}</dd>`;
+    const ratingTxt = ratings[id] ? String(ratings[id].avg) : (tm || 'N/A');
+
+    root.innerHTML = `<div class="dt">
+<div class="dt-hero"><i class="dt-bgi" ${bg(sm(t.thumbnail_url, 'w185'))}></i>
+<div class="dt-poster" role="img" aria-label="Poster ${esc(t.title)}" ${bg(sm(t.thumbnail_url, 'w500'))}></div>
+<h1 class="dt-title">${esc(t.title)}</h1><div class="dt-chips">${chips}</div></div>
+<section class="dt-card"><b class="dt-h">Sinopsis</b><p class="dt-syn ${t.description ? '' : 'ld'}" id="dtSyn">${desc}</p><button class="plink" id="dtSynB" hidden>Selengkapnya</button>
+<div class="dt-cta"><button class="btn big" id="dtGo" ${url ? '' : 'disabled'}>${ic('play')} <span>${esc(label)}</span></button><button class="btn big ghost ${subOn ? 'on' : ''}" id="dtSub" aria-pressed="${subOn}">${ic('bell')} <span>${subOn ? 'Berlangganan' : 'Subscribe'}</span></button></div>
+<div class="dt-acts"><span class="acts" data-acts></span></div></section>
+<section class="dt-card"><b class="dt-h">Progress Menonton</b><div class="dt-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div><div class="dt-ps"><b>${pct}%</b> Selesai${eps.length ? ` · ${doneN} dari ${eps.length} episode` : ''}</div></section>
+<section class="dt-card"><button class="dt-fold" id="dtFold" aria-expanded="${DTS.open}"><b class="dt-h">Detail lainnya</b>${ic('chev')}</button>
+<dl class="dt-rows" id="dtRows" ${DTS.open ? '' : 'hidden'}>${row('Studio', t.studio)}${row('Label', t.label || (t.type === 'series' ? 'TV' : 'Movie'))}${row('Tags', t.tags || t.category)}${row('Rilis', rel)}${row('Status', stTxt)}${row('Rating', ratingTxt)}${row('Genre', t.genre)}</dl>
+${me.role === 'admin' ? '<button class="plink dt-edit" id="dtEdit">Edit info judul</button>' : ''}</section>
+${isS ? `<div class="dt-eh"><h2>Episode (${eps.length})</h2><button class="dt-sq" id="dtView" aria-label="Ganti tampilan"></button><button class="dt-pillb" id="dtSort"></button></div>
+<label class="dt-search"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${P.search}"/></svg><input id="dtQ" type="search" inputmode="search" placeholder="Cari episode… (mis. 15)" autocomplete="off" value="${esc(DTS.q)}" aria-label="Cari episode"></label>
+<div class="dt-seas" id="dtSeas"></div><div class="dt-eps" id="dtList"></div>` : ''}
+</div>`;
+
+    // sinopsis
+    const syn = root.querySelector('#dtSyn'), synB = root.querySelector('#dtSynB');
+    if ((t.description || '').length > 200) synB.hidden = false;
+    synB.onclick = () => { const o = syn.classList.toggle('open'); synB.textContent = o ? 'Ringkas' : 'Selengkapnya'; };
+
+    // aksi utama
+    root.querySelector('#dtGo').onclick = () => c.play(tgt ? tgt.e : null);
+    root.querySelector('#dtSub').onclick = async function () {
+        this.disabled = true;
+        const ok = await dtSub(id);
+        this.disabled = false;
+        if (!ok) return;
+        const on = !!SUBS[id];
+        this.classList.toggle('on', on); this.setAttribute('aria-pressed', on);
+        this.querySelector('span').textContent = on ? 'Berlangganan' : 'Subscribe';
+    };
+    root.querySelector('#dtFold').onclick = function () {
+        DTS.open = !DTS.open;
+        this.setAttribute('aria-expanded', DTS.open);
+        root.querySelector('#dtRows').hidden = !DTS.open;
+    };
+    const ed = root.querySelector('#dtEdit');
+    if (ed) ed.onclick = () => dtEdit(t, () => c.redraw());
+    filmActs(root.querySelector('[data-acts]'), t);
+
+    // daftar episode
+    if (isS) {
+        const list = root.querySelector('#dtList'), seas = root.querySelector('#dtSeas');
+        const viewBtn = root.querySelector('#dtView'), sortBtn = root.querySelector('#dtSort');
+        const paintBtns = () => {
+            viewBtn.innerHTML = ic(DTS.view === 'grid' ? 'list' : 'grid');
+            sortBtn.textContent = DTS.sort === 'new' ? 'Terbaru' : 'Terlama';
+        };
+        const item = e => {
+            const x = dtEp(id, e, hist), many = new Set(eps.map(z => z.season)).size > 1;
+            const isNew = !!(c.seenAt && e.created_at && new Date(e.created_at) > new Date(c.seenAt));
+            const cur = tgt && tgt.e.id === e.id;
+            const bar = x.done ? 100 : x.pct;
+            return `<div class="dt-ep ${cur ? 'cur' : ''}" role="button" tabindex="0" data-e="${e.id}" aria-label="Putar episode ${e.number}">
+<div class="dt-th" ${bg(sm(e.thumbnail_url || t.thumbnail_url, 'w300'))}><span class="dt-play">${ic('play')}</span><span class="dt-b1">Ep ${e.number}</span>${x.dur ? `<span class="dt-b2">${dtDur(x.dur)}</span>` : ''}${bar ? `<i class="dt-tp"><b style="width:${bar}%"></b></i>` : ''}</div>
+<div class="dt-ei"><div class="dt-en">${many ? `Musim ${e.season} · ` : ''}Episode ${e.number}${isNew ? '<em>Baru</em>' : ''}</div>${e.name ? `<div class="dt-ea">${esc(e.name)}</div>` : ''}<div class="dt-es ${x.done ? 'done' : ''}">${dtEpText(x)}</div></div>
+<button class="dt-dl" data-dl="${e.id}" aria-label="Unduh episode ${e.number}">${ic('down')}</button></div>`;
+        };
+        const paint = () => {
+            const q = DTS.q.trim().toLowerCase();
+            const seasons = [...new Set(eps.map(e => e.season))];
+            seas.innerHTML = seasons.length > 1 && !q ? seasons.map(s => `<button class="${s == DTS.season ? 'on' : ''}" data-s="${s}">Musim ${s}</button>`).join('') : '';
+            let l = eps.slice();
+            if (seasons.length > 1 && !q) l = l.filter(e => e.season == DTS.season);
+            if (q) l = l.filter(e => /^\d+$/.test(q) ? String(e.number).startsWith(q) : String(e.name || '').toLowerCase().includes(q));
+            l.sort((a, b) => (a.season - b.season) || (a.number - b.number));
+            if (DTS.sort === 'new') l.reverse();
+            list.className = 'dt-eps' + (DTS.view === 'grid' ? ' grid' : '');
+            list.innerHTML = l.length ? l.map(item).join('') : `<div class="dt-empty">${q ? `Tidak ada episode untuk "${esc(DTS.q.trim())}". Coba nomor atau judul lain.` : 'Belum ada episode.'}</div>`;
+        };
+        paintBtns(); paint();
+        viewBtn.onclick = () => { DTS.view = DTS.view === 'grid' ? 'list' : 'grid'; lss('nm_epv', DTS.view); paintBtns(); paint(); };
+        sortBtn.onclick = () => { DTS.sort = DTS.sort === 'new' ? 'old' : 'new'; lss('nm_eps', DTS.sort); paintBtns(); paint(); };
+        root.querySelector('#dtQ').oninput = e => { DTS.q = e.target.value; paint(); };
+        seas.onclick = e => { const b = e.target.closest('[data-s]'); if (b) { DTS.season = +b.dataset.s; paint(); } };
+        const open = el => { const e = eps.find(z => z.id == el.dataset.e); if (e) c.play(e); };
+        list.onclick = e => {
+            const dl = e.target.closest('[data-dl]');
+            if (dl) { e.stopPropagation(); const ep = eps.find(z => z.id == dl.dataset.dl); if (ep) dtDownload(t, ep); return; }
+            const it = e.target.closest('.dt-ep'); if (it) open(it);
+        };
+        list.onkeydown = e => {
+            if (e.key !== 'Enter' && e.key !== ' ') return;
+            if (e.target.closest('[data-dl]')) return;
+            const it = e.target.closest('.dt-ep'); if (it) { e.preventDefault(); open(it); }
+        };
+    }
+    refreshViews(id);
 }
 </script>
 </body>
