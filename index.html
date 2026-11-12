@@ -1174,7 +1174,10 @@ video {
   position: fixed;
   top: calc(14px + env(safe-area-inset-top));
   left: 50%;
-  transform: translate(-50%, -90px);
+  transform: translate(-50%, calc(-100% - 40px - env(safe-area-inset-top, 0px)));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   z-index: 300;
   padding: 12px 22px;
   border-radius: 999px;
@@ -1182,7 +1185,7 @@ video {
   border: 1px solid rgba(255, 255, 255, .3);
   backdrop-filter: blur(14px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .4), 0 0 24px rgba(var(--glow), .5);
-  transition: transform .5s cubic-bezier(.3, 1.4, .4, 1);
+  transition: transform .5s cubic-bezier(.3, 1.4, .4, 1), opacity .3s ease, visibility 0s linear .5s;
   font-family: var(--font);
   font-weight: 500;
   max-width: 90vw;
@@ -1190,6 +1193,13 @@ video {
 
 .toast.on {
   transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.toast:empty {
+  display: none;
 }
 
 /* ============ AVATAR / PROFIL ============ */
@@ -2138,7 +2148,6 @@ html[data-fx=high] #nt .nc{box-shadow:0 18px 50px rgba(10,2,6,.55),0 0 34px rgba
 #nt p{margin:0 0 16px;max-height:40vh;overflow:auto;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
 #nt .nok{width:100%}
 #nt .nbar{position:absolute;left:0;bottom:0;width:100%;height:3px;background:var(--pk);transform-origin:left;animation:ntbar var(--d,10s) linear forwards}
-#nt .nc:hover .nbar{animation-play-state:paused}
 #nt.out{animation:ntout .25s forwards}
 #nt.out .nc{opacity:0;transform:translateY(12px) scale(.95);transition:opacity .25s,transform .25s}
 @keyframes ntfade{from{opacity:0}}
@@ -3138,11 +3147,15 @@ document.addEventListener('click', e => {
         sClick();
 });
 
+let toastT = 0, toastExp = 0;
 function toast(m) {
     const t = $('#toast');
+    if (!t) return;
+    clearTimeout(toastT);
     t.textContent = m;
+    toastExp = Date.now() + 2600;
     t.classList.add('on');
-    setTimeout(() => t.classList.remove('on'), 2600);
+    toastT = setTimeout(() => t.classList.remove('on'), 2600);
 }
 
 // ---- auth ----
@@ -3892,7 +3905,7 @@ const rtBadge = id => ratings[id] ? `<em class="rt">★ ${ratings[id].avg}</em>`
 const isNewTitle = t => { const d = Date.parse(t.created_at); return !isNaN(d) && Date.now() - d < 7 * 864e5 && d < Date.now() + 864e5; };
 
 const isFrame = u => /#frame$/.test(u || '');
-const poster = t => `<div class="poster${isFrame(t.thumbnail_url) ? ' frm' : ''}" data-id="${t.id}" ${isFrame(t.thumbnail_url) ? `style="--f:url('${esc(String(t.thumbnail_url).replace(/#frame$/, ''))}')"` : bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${isFrame(t.thumbnail_url) ? '<i class="frmi"></i>' : ''}${(t.cutout_url || t.character_url) ? `<img class="cut" alt="" loading="lazy" decoding="async" src="${esc(t.cutout_url || t.character_url)}">` : ''}${t.type === 'series' ? '<em class="tag">Series</em>' : ''}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
+const poster = t => `<div class="poster${isFrame(t.thumbnail_url) ? ' frm' : ''}" data-id="${t.id}" ${isFrame(t.thumbnail_url) ? `style="--f:url('${esc(String(t.thumbnail_url).replace(/#frame$/, ''))}')"` : bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${isFrame(t.thumbnail_url) ? '<i class="frmi"></i>' : ''}${(t.cutout_url || t.character_url) ? `<img class="cut" alt="" loading="lazy" decoding="async" src="${esc(t.cutout_url || t.character_url)}">` : ''}${window.NMTax ? NMTax.badge(t) : (t.type === 'series' ? '<em class="tag">Series</em>' : '')}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
 
 const empty = m => `<div class="empty"><img class="eimg" src="img/chick.png" alt="">${m}</div>`;
 
@@ -3924,10 +3937,10 @@ const views = {
         const mv = titles.filter(t => t.type !== 'series'), sr = titles.filter(t => t.type === 'series');
         const rt = t => ratings[t.id] ? ratings[t.id].avg : 0, vw = t => vcount[t.id] || 0;
         const gcount = {};
-        titles.forEach(t => (t.genre || '').split(',').map(x => x.trim()).filter(Boolean).forEach(g => (gcount[g] = gcount[g] || []).push(t)));
-        const gens = Object.entries(gcount).sort((x, y) => y[1].length - x[1].length).slice(0, 8);
+        NMTax.genreMap(titles, gcount);
+        const gens = Object.entries(gcount).sort((x, y) => y[1].length - x[1].length).slice(0, 14);
         const cats = {};
-        titles.forEach(t => { const c = catLabel(t); if (c) (cats[c] = cats[c] || []).push(t); });
+        titles.forEach(t => { const c = catLabel(t); if (c && c.toLowerCase() !== 'film') (cats[c] = cats[c] || []).push(t); });
         const top10 = [...titles].sort((x, y) => vw(y) - vw(x) || rt(y) - rt(x) || 0).slice(0, 10);
         const trend = titles.filter(t => vw(t) > 0).sort((x, y) => vw(y) - vw(x)).slice(0, 20);
         const rated = titles.filter(t => ratings[t.id]).sort((x, y) => rt(y) - rt(x) || ratings[y.id].n - ratings[x.id].n).slice(0, 20);
@@ -3942,9 +3955,10 @@ const views = {
         Object.entries(cats).forEach(([c, l]) => l.length >= 2 && !gcount[c] && add('tv', c, l, c));
         if (mv.length && sr.length) { add('film', 'Film', mv, 'Film'); add('tv', 'Series', sr, 'Series'); }
         add('clock', 'Rilis terbaru', yrs.length > 3 ? yrs : []);
+        NMTax.extraRows(titles).forEach(r => add(r.ico, r.name, r.l, r.g));
         const rowHtml = r => r.top ? `<section class="nfr nfr-top"><h2>${ic('star')} Top 10 di NauMovie</h2><div class="row">${r.top.map((t, i) => `<div class="t10"><b>${i + 1}</b>${poster(t)}</div>`).join('')}</div></section>`
             : `<section class="nfr"><h2>${ic(r.ico)} ${esc(r.name)}${r.g ? `<button class="nfall" onclick="nfGo('${esc(r.g).replace(/'/g, "\\'")}')">Lihat semua ›</button>` : ''}</h2><div class="row">${r.l.map(poster).join('')}</div></section>`;
-        const pills = `<nav class="nfpills row" aria-label="Kategori">${[['Semua', ''], ['Film', 'Film'], ['Series', 'Series'], ...gens.map(([g]) => [g, g])].map(([n, g]) => `<button class="chip" onclick="nfGo('${esc(g).replace(/'/g, "\\'")}')">${esc(n)}</button>`).join('')}</nav>`;
+        const pills = NMTax.pillsHtml(titles);
         $('#v').innerHTML = `<p class="hi">Halo, <b class="gt">${esc(me.username)}</b> ${ic('heart')}</p><p class="sub">Mau nonton apa hari ini? <button class="btn sm ghost" onclick="randomPick()">${ic('sparkle')} Acak film</button></p><nav class="shelf shelf-m" aria-label="Koleksi">${shelfBtns()}</nav>${pills}<div class="hero glass" id="hero"></div><div id="nfrows">${R.slice(0, 4).map(rowHtml).join('')}</div><div id="nfmore"></div>`;
         // baris sisanya dimuat saat mendekati layar (ringan untuk perangkat lemah)
         const rest = R.slice(4);
@@ -4052,7 +4066,7 @@ ${row('Keluar', 'Akhiri sesi di perangkat ini', `<button class="btn sm danger" o
         const body = {
             usr: () => admUsr(),
             cat: () => `<div class="sbox">${ic('search')}<input id="aq" placeholder="Cari di katalog..." value="${esc(q)}" autocomplete="off"></div><p class="hint">${titles.length} judul · ${sers.length} series</p><div id="alist">${adminList(q)}</div>`,
-            add: () => `<div class="glass pad"><div class="fgrid">${f('Judul', '<input id="a_t">')}${f('Jenis', '<select id="a_ty"><option value="movie">Film</option><option value="series">Series</option></select>')}${f('Tahun', '<input id="a_y" type="number">')}${f('Genre (pisah koma)', '<input id="a_g">')}${f('Kategori', '<select id="a_cat"><option value="film">Film</option><option value="anime">Anime</option></select>')}</div>${f('Deskripsi', '<textarea id="a_d"></textarea>')}<div class="fgrid">${f('Video (link .mp4/.m3u8 atau upload)', '<input id="a_v"><input id="a_vf" type="file" accept="video/*">')}${f('Thumbnail (link atau upload)', '<input id="a_th"><input id="a_thf" type="file" accept="image/*">')}</div><button class="btn glow" style="width:100%" onclick="addTitle()">Simpan judul</button></div>`,
+            add: () => `<div class="glass pad"><div class="fgrid">${f('Judul', '<input id="a_t">')}${f('Jenis', '<select id="a_ty"><option value="movie">Film</option><option value="series">Series</option></select>')}${f('Tahun', '<input id="a_y" type="number">')}${f('Genre (pisah koma)', '<input id="a_g">')}${f('Kategori', '<input id="a_cat" list="nm_cats" value="film" placeholder="film / anime / drama / kartun..." autocomplete="off"><datalist id="nm_cats">' + (window.NMTax ? NMTax.catOptions() : '') + '</datalist>')}</div>${f('Deskripsi', '<textarea id="a_d"></textarea>')}<div class="fgrid">${f('Video (link .mp4/.m3u8 atau upload)', '<input id="a_v"><input id="a_vf" type="file" accept="video/*">')}${f('Thumbnail (link atau upload)', '<input id="a_th"><input id="a_thf" type="file" accept="image/*">')}</div><button class="btn glow" style="width:100%" onclick="addTitle()">Simpan judul</button></div>`,
             ep: () => sers.length ? `<div class="glass pad"><div class="fgrid">${f('Series', `<select id="e_t">${sers.map(t => `<option value="${t.id}">${esc(t.title)}</option>`).join('')}</select>`)}${f('Season', '<input id="e_s" type="number" placeholder="1">')}${f('Episode ke', '<input id="e_n" type="number">')}${f('Judul episode', '<input id="e_nm">')}</div>${f('Video (link atau upload)', '<input id="e_v"><input id="e_vf" type="file" accept="video/*">')}${f('Thumbnail (opsional)', '<input id="e_th">')}<button class="btn glow" style="width:100%" onclick="addEp()">Simpan episode</button></div>` : empty('Belum ada series. Tambah dulu di tab Tambah'),
             fb: () => `<div id="fblist">${skel(2)}</div>`,
             notice: () => noticeForm(),
@@ -4946,7 +4960,7 @@ async function openTitle(id, roomMode = false) {
 <nav class="ptabs" id="ptabs">${roomMode ? '<button class="on" data-pt="info">Informasi</button><button data-pt="room">Nobar</button>' : '<button class="on" data-pt="info">Informasi</button><button data-pt="cm">Komentar</button>'}</nav>
 <div class="ppanel" id="pt-info">
 <div class="pcard" id="pcEp"></div>
-<div class="pcard pinfo"><div class="pposter" ${bg(sm(t.thumbnail_url, 'w185'))}></div><div class="ptx"><h2 class="ptitle">${esc(t.title)}</h2><p class="psyn" id="psyn">${esc(t.description || 'Belum ada sinopsis.')}</p><button class="plink" id="psynb" hidden>Lihat selengkapnya</button><div class="pchips">${String(t.genre || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 4).map(g => `<span>${esc(g)}</span>`).join('')}</div></div></div>
+<div class="pcard pinfo"><div class="pposter" ${bg(sm(t.thumbnail_url, 'w185'))}></div><div class="ptx"><h2 class="ptitle">${esc(t.title)}</h2><p class="psyn" id="psyn">${esc(t.description || 'Belum ada sinopsis.')}</p><button class="plink" id="psynb" hidden>Lihat selengkapnya</button><div class="pchips">${window.NMTax ? NMTax.chipsHtml(t) : ''}</div></div></div>
 <div class="pcard pacts"><span class="acts" data-acts></span></div>
 <div class="pcard"><b class="ph">Beri rating</b><div class="rate" id="rate"></div></div>
 ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas" id="pseas"></div><div class="pnum" id="eps"></div></section>' : ''}
@@ -6041,7 +6055,7 @@ async function addTitle() {
             type: $('#a_ty').value,
             year: +$('#a_y').value || null,
             genre: $('#a_g').value,
-            category: $('#a_cat').value || null,
+            category: ($('#a_cat').value || '').toLowerCase().trim().slice(0, 30) || null,
             description: $('#a_d').value,
             video_url: v || null,
             thumbnail_url: th || null,
@@ -6114,7 +6128,7 @@ async function ytTitle(u) {
         return j && j.title ? String(j.title).trim() : null;
     } catch (e) { return null; }
 }
-const catLabel = t => t && t.category ? String(t.category).replace(/^./, c => c.toUpperCase()) : '';
+const catLabel = t => t && t.category ? String(t.category).trim().replace(/(^|\s)\S/g, c => c.toUpperCase()) : '';
 
 // rapikan daftar sumber: buang link tidak valid / dobel, urut resolusi naik
 function cleanSources(list) {
@@ -6498,56 +6512,230 @@ function jqShow() {
 
 const jqMissing = e => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|schema cache|json_queue/i.test(e.message || ''));
 
-// ===== M4S (DASH/HLS fMP4 segment): auto-detect, grouping video+audio, satu referensi JSON valid =====
+// ===== M4S / MEDIA SMART DETECT: sniff isi biner (ISO-BMFF), pisah video/audio/gabungan, DASH .mpd, link CDN mp4/m3u8 =====
 // Segmen .m4s tidak bisa diputar sendiri: dibuat playlist HLS (EXT-X-MAP + segmen) + master video/audio, lalu hanya link master yang masuk katalog.
-const M4S_RE = /\.m4s(\?|#|$)/i, M4S_BOX = ['ftyp', 'styp', 'moof', 'moov', 'sidx', 'mdat', 'free', 'emsg'];
-const M4S_BUCKET = 'videos', M4S_DUR = 4, M4S_MAXMB = 200;
+// Deteksi berlapis: (1) isi file (box ftyp/moov/moof, handler vide/soun, codec, resolusi, durasi), (2) nama file/URL, (3) key JSON (video_url/audio_url).
+const M4S_RE = /\.(m4s|cmfv|cmfa)(\?|#|$)/i, M4S_BOX = ['ftyp', 'styp', 'moof', 'moov', 'sidx', 'mdat', 'free', 'skip', 'emsg', 'prft', 'mfra'];
+const M4S_BUCKET = 'videos', M4S_DUR = 4, M4S_MAXMB = 200, M4S_SNIFF = 524288;
 const isM4s = n => M4S_RE.test(String(n || ''));
+const isMpd = n => /\.mpd(\?|#|$)/i.test(String(n || ''));
+const m4sDec = s => { try { return decodeURIComponent(s); } catch (e) { return s; } };
 
-// deteksi peran dari nama/key: audio vs video, init vs media, nomor urut, resolusi
+// ---- parser box ISO-BMFF (toleran terhadap data terpotong) ----
+function m4sBoxes(b, s = 0, e = b.length) {
+    const out = [], dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
+    while (s + 8 <= e) {
+        let size = dv.getUint32(s), hdr = 8;
+        const type = String.fromCharCode(b[s + 4], b[s + 5], b[s + 6], b[s + 7]);
+        if (!/^[\x20-\x7e]{4}$/.test(type)) break;
+        if (size === 1) { if (s + 16 > e) break; size = dv.getUint32(s + 8) * 4294967296 + dv.getUint32(s + 12); hdr = 16; } else if (size === 0) size = e - s;
+        if (size < hdr) break;
+        out.push({ type, start: s, body: s + hdr, end: Math.min(s + size, e), size });
+        s += size;
+    }
+    return out;
+}
+
+// -> {ok, init, media, frag, brands[], tracks[{id,kind,fourcc,codec,w,h,ts}], ids[], tfdt{id:val}, sidxDur, ts, dur}
+function m4sSniff(b) {
+    const r = { ok: false, init: false, media: false, frag: false, brands: [], tracks: [], ids: [], tfdt: {}, sidxDur: 0, ts: 0, dur: 0 };
+    if (!b || b.length < 8) return r;
+    const top = m4sBoxes(b);
+    if (!top.length || !M4S_BOX.concat(['moov']).includes(top[0].type)) return r;
+    r.ok = true;
+    const dv = new DataView(b.buffer, b.byteOffset, b.byteLength), kids = (p, t) => m4sBoxes(b, p.body, p.end).filter(x => x.type === t);
+    const u32 = o => o + 4 <= b.length ? dv.getUint32(o) : 0, cc = o => String.fromCharCode(b[o], b[o + 1], b[o + 2], b[o + 3]);
+    const hex = n => n.toString(16).padStart(2, '0');
+    for (const x of top) {
+        if (x.type === 'ftyp' || x.type === 'styp') { r.brands.push(cc(x.body)); for (let o = x.body + 8; o + 4 <= x.end; o += 4) r.brands.push(cc(o)); }
+        if (x.type === 'sidx') {
+            const v = b[x.body], ts = u32(x.body + 8), skip = v ? 16 : 8, n = (b[x.body + 12 + skip] << 8) | b[x.body + 13 + skip];
+            let d = 0; for (let i = 0; i < n; i++) d += u32(x.body + 14 + skip + i * 12 + 4);
+            if (ts) r.sidxDur += d / ts;
+        }
+        if (x.type === 'moov') {
+            r.init = true;
+            const mv = kids(x, 'mvhd')[0]; if (mv) { const v = b[mv.body]; r.ts = u32(mv.body + (v ? 20 : 12)); r.dur = v ? u32(mv.body + 24) * 4294967296 + u32(mv.body + 28) : u32(mv.body + 16); }
+            if (kids(x, 'mvex').length) r.frag = true;
+            kids(x, 'trak').forEach(tk => {
+                const t = { id: 0, kind: 'other', fourcc: '', codec: '', w: 0, h: 0, ts: 0 };
+                const th = kids(tk, 'tkhd')[0];
+                if (th) { const v = b[th.body]; t.id = u32(th.body + (v ? 20 : 12)); const wo = th.body + (v ? 88 : 76); t.w = Math.round(u32(wo) / 65536); t.h = Math.round(u32(wo + 4) / 65536); }
+                const md = kids(tk, 'mdia')[0];
+                if (md) {
+                    const hd = kids(md, 'hdlr')[0], mh = kids(md, 'mdhd')[0];
+                    if (hd) { const h = cc(hd.body + 8); t.kind = h === 'vide' ? 'video' : h === 'soun' ? 'audio' : 'other'; }
+                    if (mh) t.ts = u32(mh.body + (b[mh.body] ? 20 : 12));
+                    const mi = kids(md, 'minf')[0], sb = mi && kids(mi, 'stbl')[0], sd = sb && kids(sb, 'stsd')[0];
+                    if (sd && sd.body + 16 <= b.length) {
+                        const es = sd.body + 8, ty = cc(es + 4); t.fourcc = ty; t.codec = ty;
+                        const ent = { body: es + (t.kind === 'video' ? 86 : 36), end: Math.min(es + u32(es), b.length) };
+                        if (t.kind === 'video') {
+                            const ac = m4sBoxes(b, ent.body, ent.end).find(c => c.type === 'avcC');
+                            if (ac) t.codec = 'avc1.' + hex(b[ac.body + 1]) + hex(b[ac.body + 2]) + hex(b[ac.body + 3]);
+                        } else if (t.kind === 'audio' && ty === 'mp4a') {
+                            t.codec = 'mp4a.40.2';
+                            const ec = m4sBoxes(b, ent.body, ent.end).find(c => c.type === 'esds');
+                            if (ec) {
+                                let o = ec.body + 4; const lim = ec.end;
+                                const len = () => { let n = 0, k = 0; while (o < lim && k++ < 4) { const c = b[o++]; n = (n << 7) | (c & 127); if (!(c & 128)) break; } return n; };
+                                if (b[o] === 3) { o++; len(); o += 3; }
+                                if (b[o] === 4) { o++; len(); const oti = b[o]; o += 13; if (b[o] === 5) { o++; len(); const aot = b[o] >> 3; t.codec = oti === 0x40 ? 'mp4a.40.' + (aot || 2) : 'mp4a.' + hex(oti).toUpperCase(); } }
+                            }
+                        } else if (t.kind === 'audio') t.codec = ty === 'ec-3' ? 'ec-3' : ty === 'ac-3' ? 'ac-3' : ty === 'Opus' ? 'opus' : ty;
+                    }
+                }
+                r.tracks.push(t);
+            });
+        }
+        if (x.type === 'moof') {
+            r.media = r.frag = true;
+            kids(x, 'traf').forEach(tf => {
+                const fh = kids(tf, 'tfhd')[0]; if (!fh) return;
+                const id = u32(fh.body + 4); if (!r.ids.includes(id)) r.ids.push(id);
+                const td = kids(tf, 'tfdt')[0];
+                if (td && r.tfdt[id] == null) r.tfdt[id] = b[td.body] ? u32(td.body + 4) * 4294967296 + u32(td.body + 8) : u32(td.body + 4);
+            });
+        }
+    }
+    return r;
+}
+
+async function m4sSniffFile(f) { try { return m4sSniff(new Uint8Array(await f.slice(0, M4S_SNIFF).arrayBuffer())); } catch (e) { return m4sSniff(null); } }
+// file URL jarak jauh: hanya berhasil bila server mengizinkan CORS + Range; kalau gagal diam-diam pakai deteksi nama
+async function m4sSniffUrl(u) {
+    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 6000);
+    try {
+        const r = await fetch(u, { headers: { Range: 'bytes=0-' + (M4S_SNIFF - 1) }, signal: ac.signal });
+        if (!r.ok) return m4sSniff(null);
+        return m4sSniff(new Uint8Array((await r.arrayBuffer()).slice(0, M4S_SNIFF)));
+    } catch (e) { return m4sSniff(null); } finally { clearTimeout(tm); }
+}
+
+// ---- deteksi dari nama/key: audio | video | muxed (gabungan), init vs media, nomor urut, resolusi ----
 function m4sInfo(name) {
-    const n = decodeURIComponent(String(name || '')).split(/[?#]/)[0].split('/').pop().toLowerCase();
-    const full = String(name || '').toLowerCase();
-    const role = /(^|[^a-z])(audio|aud|mp4a|snd)([^a-z]|$)|[-_.]a(\d|[-_.])|stream[-_]?1([^0-9]|$)|(^|[-_])a[-_]?\d+\.m4s/.test(n) || /\/audio\//.test(full) ? 'audio' : 'video';
-    const init = /init|header|\bmap\b|^0\.m4s$/.test(n);
-    const nums = (n.replace(/\.m4s$/, '').replace(/\d{3,4}p/, '').match(/\d+/g) || []).map(Number);
+    const full = m4sDec(String(name || '')).toLowerCase(), n = full.split(/[?#]/)[0].split('/').pop(), stem = n.replace(/\.(m4s|cmfv|cmfa|mp4|m4a|m4v)$/, '');
+    const aud = /(^|[^a-z])(audio|aud|mp4a|aac|snd|sound|dolby|ec3|opus|cmfa)(?=[^a-z]|$)|(^|[-_.])a\d*(?=[-_.]|$)|stream[-_]?1(?![0-9])/.test(n) || /\/(audio|aud)s?\//.test(full);
+    const vid = /(^|[^a-z])(video|vid|avc\d?|hevc|h26[45]|cmfv)(?=[^a-z]|$)|(^|[-_.])v\d*(?=[-_.]|$)/.test(n) || /\/(video|vid)s?\//.test(full);
+    const role = aud && vid ? 'muxed' : aud ? 'audio' : vid ? 'video' : null;
+    const init = /init|header|(^|[^a-z])map([^a-z]|$)|^0\.m4s$|initialization/.test(n);
+    const clean = stem.replace(/\d{3,4}p/g, ' ').replace(/(^|[-_.])[va]\d+(?=[-_.]|$)/g, ' ').replace(/(^|[-_.])(bw|bitrate|kbps|br)[-_]?\d+/g, ' ');
+    const nums = (clean.match(/\d+/g) || []).map(Number); // nomor urut = angka terakhir (chunk-0-12 -> 12; seg-5-v1-a1 -> 5)
     return { role, init, idx: init ? -1 : (nums.length ? nums[nums.length - 1] : 0), res: ((n.match(/(\d{3,4})p/) || [])[1] || '') };
 }
 
-// items: [{name, url?, file?}] -> {video:{init,segs[]}, audio:{...}, res, warn[]}; lempar Error bila struktur tidak valid
-function m4sGroup(items) {
-    const g = { video: { init: null, segs: [] }, audio: { init: null, segs: [] }, res: '', warn: [] }, seen = new Set();
-    items.forEach(it => {
-        const i = m4sInfo(it.name), t = g[i.role], k = i.role + (i.init ? ':init' : ':' + i.idx);
-        if (seen.has(k) && !i.init) return g.warn.push('duplikat dilewati: ' + it.name);
+// items: [{name, url?, file?, sniff?, role?, init?, idx?, dur?}], meta: {video:{codecs,bw,w,h}, audio:{...}} (dari MPD)
+// -> {video:{init,segs[]}, audio:{...}, merged, res, codecs, bw, info, warn[]}; lempar Error bila struktur tidak valid
+function m4sGroup(items, meta = {}) {
+    const g = { video: { init: null, segs: [] }, audio: { init: null, segs: [] }, merged: false, res: '', codecs: '', bw: 0, info: '', warn: [] };
+    // 1) klasifikasi tiap item: isi file > data bawaan > nama
+    const rows = items.map(it => {
+        const i = m4sInfo(it.name), s = it.sniff && it.sniff.ok ? it.sniff : null;
+        const r = { it, nameRole: i.role, role: it.role || null, init: it.init != null ? it.init : (s ? s.init : i.init), idx: it.idx != null ? it.idx : i.idx, res: i.res, s, src: it.role ? 'data' : null };
+        if (s && s.init && !it.role) {
+            const k = [...new Set(s.tracks.filter(t => t.kind !== 'other').map(t => t.kind))];
+            if (k.length > 1) r.role = 'muxed'; else if (k.length) r.role = k[0];
+            if (r.role) r.src = 'isi';
+        }
+        return r;
+    });
+    // 2) track id dari init -> role (hanya jika tidak ambigu), dipakai untuk segmen media
+    const tmap = {}, amb = new Set();
+    rows.filter(r => r.s && r.s.init).forEach(r => r.s.tracks.forEach(t => { if (t.kind === 'other') return; if (tmap[t.id] && tmap[t.id] !== t.kind) amb.add(t.id); tmap[t.id] = t.kind; }));
+    amb.forEach(id => delete tmap[id]);
+    rows.forEach(r => {
+        if (r.role) return;
+        if (r.s && r.s.media && r.s.ids.length) {
+            const ks = [...new Set(r.s.ids.map(id => tmap[id]).filter(Boolean))];
+            if (r.s.ids.length > 1 && ks.length > 1) { r.role = 'muxed'; r.src = 'isi'; return; }
+            if (ks.length === 1 && r.s.ids.length === 1) { r.role = ks[0]; r.src = 'isi'; return; }
+        }
+        if (r.nameRole) { r.role = r.nameRole; r.src = 'nama'; } else { r.role = 'video'; r.src = 'tebak'; }
+    });
+    const guessed = rows.filter(r => r.src === 'tebak').length;
+    if (guessed) g.warn.push(`${guessed} file tidak jelas video/audio, dianggap video`);
+    // 3) gabungan vs terpisah
+    const cnt = k => rows.filter(r => r.role === k && !r.init).length;
+    if (cnt('muxed') && (cnt('video') || cnt('audio'))) {
+        const keep = cnt('muxed') >= cnt('video') ? 'muxed' : 'split';
+        g.warn.push(`ada segmen gabungan dan terpisah sekaligus, dipakai yang ${keep === 'muxed' ? 'gabungan' : 'terpisah'}`);
+        for (let x = rows.length - 1; x >= 0; x--) if ((rows[x].role === 'muxed') !== (keep === 'muxed')) rows.splice(x, 1);
+    }
+    rows.forEach(r => { if (r.role === 'muxed') r.role = 'video'; });
+    g.merged = items.length > 0 && rows.some(r => r.s && r.s.init && new Set(r.s.tracks.map(t => t.kind)).has('video') && new Set(r.s.tracks.map(t => t.kind)).has('audio'))
+        || rows.some(r => r.nameRole === 'muxed' && !r.s);
+    // 4) beberapa resolusi di nama file -> ambil yang tertinggi
+    const resList = [...new Set(rows.filter(r => r.role === 'video' && r.res).map(r => +r.res))].sort((a, b) => b - a);
+    if (resList.length > 1) {
+        g.warn.push(`beberapa resolusi terdeteksi (${resList.map(x => x + 'p').join(', ')}), dipakai ${resList[0]}p`);
+        for (let x = rows.length - 1; x >= 0; x--) if (rows[x].role === 'video' && rows[x].res && +rows[x].res !== resList[0]) rows.splice(x, 1);
+    }
+    // 5) susun + duplikat + urutan
+    const seen = new Set();
+    rows.forEach(r => {
+        const t = g[r.role], k = r.role + (r.init ? ':init' : ':' + r.idx);
+        if (seen.has(k)) return g.warn.push((r.init ? 'init ganda' : 'duplikat') + ' dilewati: ' + r.it.name);
         seen.add(k);
-        if (i.res && !g.res) g.res = i.res + 'p';
-        if (i.init) t.init = it; else t.segs.push({ ...it, idx: i.idx });
+        if (r.res && !g.res) g.res = r.res + 'p';
+        if (r.init) t.init = r.it; else t.segs.push({ ...r.it, idx: r.idx, s: r.s });
     });
-    ['video', 'audio'].forEach(r => {
-        const t = g[r];
+    ['video', 'audio'].forEach(rl => {
+        const t = g[rl];
         t.segs.sort((a, b) => a.idx - b.idx);
-        for (let x = 1; x < t.segs.length; x++) if (t.segs[x].idx - t.segs[x - 1].idx > 1) throw new Error(`segmen ${r} terputus: nomor ${t.segs[x - 1].idx} lalu ${t.segs[x].idx} (ada yang hilang)`);
+        if (t.segs.length && t.segs[0].idx < 100000) // nama berbasis waktu ($Time$) wajar punya lompatan, jangan dianggap hilang
+            for (let x = 1; x < t.segs.length; x++) if (t.segs[x].idx - t.segs[x - 1].idx > 1) throw new Error(`segmen ${rl} terputus: nomor ${t.segs[x - 1].idx} lalu ${t.segs[x].idx} (ada yang hilang)`);
     });
-    if (!g.video.segs.length) throw new Error('tidak ada segmen video .m4s');
+    if (!g.video.segs.length) throw new Error('tidak ada segmen video .m4s' + (g.audio.segs.length ? ' (hanya audio)' : ''));
     if (!g.video.init) g.warn.push('init segment video tidak ditemukan (init-*.m4s / init.mp4): pemutaran bisa gagal');
     if (g.audio.segs.length) {
         if (!g.audio.init) g.warn.push('init segment audio tidak ditemukan');
         if (Math.abs(g.audio.segs.length - g.video.segs.length) > 1) g.warn.push(`jumlah segmen audio (${g.audio.segs.length}) beda dengan video (${g.video.segs.length})`);
-    } else g.warn.push('tidak ada track audio (video tanpa suara)');
+    } else if (!g.merged) g.warn.push('tidak ada track audio (video tanpa suara)');
+    // 6) info track dari init: codec, resolusi, durasi segmen
+    const vi = g.video.init && g.video.init.sniff, ai = g.audio.init && g.audio.init.sniff;
+    const vt = vi && vi.tracks.find(t => t.kind === 'video'), at = (g.merged ? vi : ai) && (g.merged ? vi : ai).tracks.find(t => t.kind === 'audio');
+    const mv = meta.video || {}, ma = meta.audio || {};
+    if (vt && vt.h && !g.res) g.res = vt.h + 'p'; else if (mv.h && !g.res) g.res = mv.h + 'p';
+    const vc = (vt && vt.codec) || mv.codecs || '', ac = (at && at.codec) || ma.codecs || '';
+    if (/^avc1\./.test(vc) && (ac || !g.audio.segs.length && !g.merged)) g.codecs = [vc, ac].filter(Boolean).join(',');
+    const fix = (t, tr, mm) => { // durasi tiap segmen: dari MPD/data > selisih tfdt/timescale > sidx > default
+        const ts = (tr && tr.ts) || 0, id = tr && tr.id;
+        t.segs.forEach((s, i) => {
+            if (s.dur) return;
+            const a = s.s, nx = t.segs[i + 1] && t.segs[i + 1].s;
+            if (ts && a && nx && a.tfdt[id] != null && nx.tfdt[id] != null && nx.tfdt[id] > a.tfdt[id]) s.dur = (nx.tfdt[id] - a.tfdt[id]) / ts;
+            else if (a && a.sidxDur) s.dur = a.sidxDur;
+        });
+        const known = t.segs.filter(s => s.dur); // segmen terakhir meniru yang sebelumnya
+        if (known.length && !t.segs[t.segs.length - 1].dur) t.segs[t.segs.length - 1].dur = known[known.length - 1].dur;
+    };
+    fix(g.video, vt, mv); fix(g.audio, at, ma);
+    const total = g.video.segs.reduce((a, s) => a + (s.dur || M4S_DUR), 0);
+    const bytes = [g.video.init, ...g.video.segs, g.audio.init, ...g.audio.segs].reduce((a, x) => a + (x && x.size || 0), 0);
+    g.bw = mv.bw ? mv.bw + (ma.bw || 0) : bytes && total ? Math.max(100000, Math.round(bytes * 8 / total)) : 0;
+    const fmt = s => { s = Math.round(s); return (s >= 3600 ? Math.floor(s / 3600) + 'j ' : '') + Math.floor(s % 3600 / 60) + 'm ' + String(s % 60).padStart(2, '0') + 'd'; };
+    const nm = c => /^avc1/.test(c) ? 'H.264' : /^(hvc1|hev1)/.test(c) ? 'H.265' : /^av01/.test(c) ? 'AV1' : /^vp0?9/.test(c) ? 'VP9' : /^mp4a/.test(c) ? 'AAC' : /^ec-3/.test(c) ? 'E-AC3' : /^ac-3/.test(c) ? 'AC3' : c || '';
+    g.info = (g.merged ? 'gabungan (audio+video dalam satu segmen)' : g.audio.segs.length ? 'terpisah (video + audio)' : 'video saja')
+        + ` · video ${g.video.segs.length} seg${vc ? ' ' + nm(vc) : ''}${vt && vt.w ? ' ' + vt.w + 'x' + vt.h : g.res ? ' ' + g.res : ''}`
+        + (g.audio.segs.length ? ` · audio ${g.audio.segs.length} seg${ac ? ' ' + nm(ac) : ''}` : g.merged && ac ? ' · audio ' + nm(ac) : '') + ` · ±${fmt(total)}`;
     return g;
 }
 
-// validasi isi biner: kotak ISO-BMFF (ftyp/styp/moof/moov/...) di byte 4-8
+// validasi isi biner: kotak ISO-BMFF di awal file; mengembalikan hasil sniff
 async function m4sCheck(f) {
     if (!f.size) throw new Error(f.name + ': file kosong');
     if (f.size > M4S_MAXMB * 1048576) throw new Error(`${f.name}: lebih dari ${M4S_MAXMB} MB`);
-    const b = new Uint8Array(await f.slice(0, 12).arrayBuffer());
-    if (b.length < 8 || !M4S_BOX.includes(String.fromCharCode(b[4], b[5], b[6], b[7]))) throw new Error(f.name + ': bukan segmen fMP4 yang valid');
+    const s = await m4sSniffFile(f);
+    if (!s.ok) throw new Error(f.name + ': bukan segmen fMP4 yang valid');
+    if (!s.frag && s.init && !isM4s(f.name)) throw new Error(f.name + ': mp4 biasa (bukan fragment/segmen)');
+    return s;
 }
 
-const m4sList = (t, dur) => '#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:' + Math.ceil(dur) + '\n#EXT-X-MEDIA-SEQUENCE:' + (t.segs[0].idx || 0) + '\n#EXT-X-PLAYLIST-TYPE:VOD\n'
-    + (t.init ? '#EXT-X-MAP:URI="' + t.init.url + '"\n' : '') + t.segs.map(x => '#EXTINF:' + dur.toFixed(3) + ',\n' + x.url).join('\n') + '\n#EXT-X-ENDLIST\n';
+const m4sList = (t, dur) => {
+    const ds = t.segs.map(x => x.dur || dur), mx = Math.max(dur, ...ds);
+    return '#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:' + Math.ceil(mx) + '\n#EXT-X-MEDIA-SEQUENCE:' + (t.segs[0].idx < 100000 ? t.segs[0].idx || 0 : 0) + '\n#EXT-X-PLAYLIST-TYPE:VOD\n'
+        + (t.init ? '#EXT-X-MAP:URI="' + t.init.url + '"\n' : '') + t.segs.map((x, i) => '#EXTINF:' + ds[i].toFixed(3) + ',\n' + x.url).join('\n') + '\n#EXT-X-ENDLIST\n';
+};
 
 // upload dengan retry + rollback: bila satu gagal, semua yang sudah terupload dihapus (tidak ada upload parsial)
 async function m4sPublish(g, title, onP) {
@@ -6570,8 +6758,9 @@ async function m4sPublish(g, title, onP) {
         if (bad.length) throw new Error('link segmen tidak valid: ' + bad[0].name);
         const pl = async (r, k) => g[r].segs.length ? await put(`${base}/${k}.m3u8`, new Blob([m4sList(g[r], M4S_DUR)], { type: 'application/vnd.apple.mpegurl' }), 'application/vnd.apple.mpegurl') : null;
         const vu = await pl('video', 'video'), au = await pl('audio', 'audio');
+        const attrs = 'BANDWIDTH=' + (g.bw || 2000000) + (g.codecs ? ',CODECS="' + g.codecs + '"' : '') + (au ? ',AUDIO="aud"' : '');
         const master = '#EXTM3U\n#EXT-X-VERSION:7\n' + (au ? '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,URI="' + au + '"\n' : '')
-            + '#EXT-X-STREAM-INF:BANDWIDTH=2000000' + (au ? ',AUDIO="aud"' : '') + '\n' + vu + '\n';
+            + '#EXT-X-STREAM-INF:' + attrs + '\n' + vu + '\n';
         return await put(`${base}/master.m3u8`, new Blob([master], { type: 'application/vnd.apple.mpegurl' }), 'application/vnd.apple.mpegurl');
     } catch (e) {
         if (done.length) { try { await st.remove(done); } catch (x) { } }
@@ -6579,30 +6768,145 @@ async function m4sPublish(g, title, onP) {
     }
 }
 
-// JSON berisi URL .m4s (objek/array/nested) -> daftar group; tiap group = satu film/episode
-function m4sFromJson(j) {
-    const out = [], walk = (o, key) => {
-        if (!o || typeof o !== 'object') return;
-        const urls = [];
-        const grab = (v, k) => { if (typeof v === 'string' && isM4s(v)) urls.push({ name: (k && !/\//.test(v.split('/').pop()) ? k + '_' : '') + v, url: v.trim() }); else if (v && typeof v === 'object' && !Array.isArray(v) && (v.url || v.src)) grab(v.url || v.src, k); };
-        const flat = Array.isArray(o) ? o.map((v, i) => [String(i), v]) : Object.entries(o);
-        flat.forEach(([k, v]) => { if (Array.isArray(v)) v.forEach(x => grab(x, k)); else grab(v, k); });
-        if (urls.length) {
-            // nama = path asli URL, tapi key (video/audio/init) ikut dipakai bila URL tidak informatif
-            const items = urls.map(u => ({ name: u.name.startsWith('http') ? u.name : u.name, url: u.url }));
-            out.push({ title: String(o.title || o.judul || o.name || o.nama_anime || key || '').trim(), cover: o.thumbnail || o.poster || o.gambar_anime || null, items });
-        }
-        flat.forEach(([k, v]) => { if (v && typeof v === 'object') (Array.isArray(v) ? v : [v]).forEach(x => walk(x, k)); });
+// ---- DASH (.mpd): ambil representasi video + audio terbaik, hasilkan item segmen (URL absolut) ----
+function mpdDur(s) { const m = /^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?)?$/.exec(s || ''); return m ? (+m[1] || 0) * 86400 + (+m[2] || 0) * 3600 + (+m[3] || 0) * 60 + (+m[4] || 0) : 0; }
+function mpdParse(xml, mpdUrl) {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.querySelector('parsererror')) throw new Error('MPD bukan XML valid');
+    const mpd = doc.documentElement, ch = (e, n) => [...e.children].filter(c => c.localName === n), at = (e, n) => e && e.getAttribute(n);
+    const per = ch(mpd, 'Period')[0];
+    if (!per) throw new Error('MPD tanpa Period');
+    const warn = [];
+    if (at(mpd, 'type') === 'dynamic') throw new Error('MPD live (dynamic) tidak didukung');
+    if (ch(mpd, 'Period').length > 1) warn.push('MPD punya beberapa Period, hanya yang pertama dipakai');
+    const total = mpdDur(at(per, 'duration')) || mpdDur(at(mpd, 'mediaPresentationDuration'));
+    const join = (b, r) => { try { return new URL(r, b).href; } catch (e) { return r; } };
+    const baseOf = (b, e) => { const x = ch(e, 'BaseURL')[0]; return x ? join(b, x.textContent.trim()) : b; };
+    const pb = baseOf(baseOf(mpdUrl, mpd), per), sets = ch(per, 'AdaptationSet');
+    const pick = kind => {
+        let best = null;
+        sets.forEach(a => {
+            const ct = at(a, 'contentType') || (at(a, 'mimeType') || '').split('/')[0];
+            ch(a, 'Representation').forEach(rp => {
+                const k = at(rp, 'contentType') || (at(rp, 'mimeType') || '').split('/')[0] || ct;
+                if (k !== kind) return;
+                const bw = +at(rp, 'bandwidth') || 0, h = +at(rp, 'height') || +at(a, 'height') || 0;
+                if (!best || (kind === 'video' ? h * 1e7 + bw : bw) > best.score) best = { a, rp, bw, h, w: +at(rp, 'width') || +at(a, 'width') || 0, score: kind === 'video' ? h * 1e7 + bw : bw };
+            });
+        });
+        return best;
     };
-    walk(j, '');
-    // jangan hitung dobel: ambil node terdalam yang punya URL
-    return out.filter((a, i) => !out.some((b, k) => k !== i && b.items.length < a.items.length && b.items.every(x => a.items.some(y => y.url === x.url))));
+    const items = [], meta = {};
+    ['video', 'audio'].forEach(kind => {
+        const p = pick(kind); if (!p) return;
+        if (ch(p.a, 'ContentProtection').concat(ch(p.rp, 'ContentProtection')).some(c => !/mp4protection/i.test(at(c, 'schemeIdUri') || ''))) throw new Error('MPD memakai DRM (ContentProtection), tidak bisa diputar');
+        const base = baseOf(baseOf(pb, p.a), p.rp), id = at(p.rp, 'id') || '', bw = p.bw;
+        const tp = ch(p.rp, 'SegmentTemplate')[0] || ch(p.a, 'SegmentTemplate')[0], sl = ch(p.rp, 'SegmentList')[0] || ch(p.a, 'SegmentList')[0];
+        const sub = (s, num, time) => s.replace(/\$(RepresentationID|Number|Bandwidth|Time)(?:%0(\d+)d)?\$/g, (_, k, w) => { const v = k === 'RepresentationID' ? id : k === 'Number' ? num : k === 'Bandwidth' ? bw : time; return w ? String(v).padStart(+w, '0') : String(v); }).replace(/\$\$/g, '$');
+        const add = (url, init, idx, dur) => items.push({ name: kind + '/' + (init ? 'init' : 'seg-' + idx) + '.m4s', url, role: kind, init, idx, dur });
+        if (tp) {
+            const ts = +at(tp, 'timescale') || 1, sn = at(tp, 'startNumber') != null ? +at(tp, 'startNumber') : 1, ini = at(tp, 'initialization'), med = at(tp, 'media');
+            if (!med) throw new Error('SegmentTemplate tanpa atribut media');
+            if (ini) add(join(base, sub(ini, 0, 0)), true, -1, 0);
+            const tl = ch(tp, 'SegmentTimeline')[0];
+            if (tl) { let t = 0, n = sn; ch(tl, 'S').forEach(s => { if (at(s, 't') != null) t = +at(s, 't'); const d = +at(s, 'd'), rep = +at(s, 'r') || 0; for (let i = 0; i <= rep; i++) { add(join(base, sub(med, n, t)), false, n, d / ts); t += d; n++; } }); }
+            else {
+                const d = +at(tp, 'duration') / ts; if (!d || !total) throw new Error('SegmentTemplate tanpa SegmentTimeline/durasi total');
+                const c = Math.ceil(total / d); for (let i = 0; i < c; i++) add(join(base, sub(med, sn + i, i * d * ts)), false, sn + i, d);
+            }
+        } else if (sl) {
+            const ts = +at(sl, 'timescale') || 1, d = (+at(sl, 'duration') || 0) / ts, ini = ch(sl, 'Initialization')[0];
+            if (ini) add(join(base, at(ini, 'sourceURL')), true, -1, 0);
+            ch(sl, 'SegmentURL').forEach((s, i) => add(join(base, at(s, 'media')), false, i + 1, d));
+        } else throw new Error('MPD tunggal (SegmentBase / satu file) tidak bisa disusun jadi playlist HLS');
+        meta[kind] = { codecs: at(p.rp, 'codecs') || at(p.a, 'codecs') || '', bw, w: p.w, h: p.h };
+    });
+    if (!items.length) throw new Error('MPD tidak berisi video');
+    return { items, meta, warn };
+}
+async function mpdFetch(u) {
+    let r;
+    try { r = await fetch(u); } catch (e) { throw new Error('MPD tidak bisa diambil (CORS / jaringan): ' + u.split('/').pop().split('?')[0]); }
+    if (!r.ok) throw new Error('MPD HTTP ' + r.status);
+    return mpdParse(await r.text(), u);
 }
 
-// group -> record format jqBuild (qualities[].source_quality = link master m3u8)
+// ---- scan JSON: node mana pun yang punya link media (mp4/m3u8/mpd/m4s/youtube/CDN, atau pasangan video_url+audio_url) ----
+const MS_SKIP = /poster|thumb|cover|image|img|gambar|banner|logo|icon|sub(title)?s?|caption|vtt|srt|track|preview|trailer_img|avatar/i;
+const MS_KEY = /url|src|link|file|stream|video|audio|source|hls|dash|mpd|m3u8|mp4|cdn|play|watch|m4s|init|segment/i;
+const MS_IMG = /\.(jpe?g|png|gif|webp|avif|svg|bmp|ico|vtt|srt|ass|ttml|json|html?|txt)(\?|#|$)/i;
+function mediaScan(j) {
+    const out = [];
+    const rkey = (k, u) => { const m = (String(k) + ' ' + m4sDec(u)).match(/(?:^|[^\d])(2160|1440|1080|720|576|540|480|360|240|144)(?:p|[^\d]|$)/); return m ? m[1] + 'p' : ''; };
+    const media = (v, k) => typeof v === 'string' && okUrl(v) && !MS_SKIP.test(k) && !MS_IMG.test(v) && (isM4s(v) || isMpd(v) || srcKind(v) !== 'cdn' || MS_KEY.test(k));
+    const walk = (o, ctx, key) => {
+        if (!o || typeof o !== 'object') return;
+        const an = (o.anime && typeof o.anime === 'object') ? o.anime : {};
+        const c = { ...ctx };
+        const t = String(o.anime_title || o.nama_anime || an.nama_anime || o.title || o.judul || o.name || '').trim();
+        if (t) c.title = t;
+        if (!c.title && key && !/^\d+$/.test(key)) c.title = key.replace(/[_-]+/g, ' ');
+        c.cover = [o.gambar_anime, an.gambar_anime, o.thumbnail, o.poster, o.cover, o.image].find(v => okUrl(v)) || c.cover || null;
+        if (o.anime_id != null) c.anime_id = o.anime_id;
+        const grp = { title: c.title || '', cover: c.cover, extra: { anime_id: c.anime_id, nomor_episode: o.nomor_episode != null ? o.nomor_episode : o.episode, judul_episode: o.judul_episode || o.episode_title, category: o.category || o.kategori || an.kategori || an.category }, direct: [], m4s: [], mpd: [], urls: new Set(), vKey: [], aKey: [] };
+        const grab = (v, k) => {
+            if (typeof v === 'string') {
+                if (!media(v, k)) return;
+                const u = v.trim();
+                if (grp.urls.has(u)) return;
+                grp.urls.add(u);
+                if (isMpd(u)) grp.mpd.push(u);
+                else if (isM4s(u)) grp.m4s.push({ name: (/(audio|video)/i.test(k) && !/(audio|video)/i.test(m4sDec(u)) ? k + '/' : '') + u, url: u });
+                else { const kind = /audio/i.test(k) && !/video/i.test(k) ? 'a' : 'v'; (kind === 'a' ? grp.aKey : grp.vKey).push({ res: rkey(k, u), url: u }); }
+            } else if (Array.isArray(v)) v.forEach(x => grab(x, k));
+            else if (v && typeof v === 'object') { const u = v.url || v.src || v.link || v.file || v.source; if (typeof u === 'string') { const rr = v.quality || v.label || v.resolution || v.res || v.nama_quality; grab(u, rr ? k + ' ' + rr : k); } }
+        };
+        Object.entries(o).forEach(([k, v]) => {
+            if (k === 'anime') return;
+            if (v && typeof v === 'object' && !Array.isArray(v) && !(v.url || v.src || v.link || v.file || v.source)) { // peta kualitas {"1080p": url} ikut node induk, bukan film baru
+                const vs = Object.values(v);
+                if (vs.length && vs.every(x => typeof x === 'string' || (Array.isArray(x) && x.every(y => typeof y === 'string')))) Object.entries(v).forEach(([k2, v2]) => grab(v2, k + ' ' + k2));
+                return;
+            }
+            grab(v, k);
+        });
+        if (grp.aKey.length && grp.vKey.length) { grp.warn = `audio terpisah (${grp.aKey[0].url.split('/').pop().split('?')[0]}) tidak bisa digabung dengan video non-fragment di browser, video dipakai apa adanya`; grp.direct.push(...grp.vKey); } else grp.direct.push(...grp.vKey, ...grp.aKey);
+        if (grp.direct.length || grp.m4s.length || grp.mpd.length) out.push(grp);
+        const next = [];
+        Object.entries(o).forEach(([k, v]) => { if (v && typeof v === 'object') (Array.isArray(v) ? v : [v]).forEach(x => next.push([x, k])); });
+        next.forEach(([x, k]) => walk(x, c, k));
+    };
+    walk(j, {}, '');
+    const all = g => [...g.urls];
+    return out.filter((a, i) => !out.some((b, k) => k !== i && all(a).every(u => b.urls.has(u)) && (b.urls.size > a.urls.size || (b.urls.size === a.urls.size && k < i))));
+}
+
+// satu group scan -> record format jqBuild (qualities[].source_quality); m4s / mpd disusun jadi master HLS
+async function mediaRecord(gr, title, onP, rep) {
+    const quals = [], warn = [...(gr.warn ? [gr.warn] : [])], info = [];
+    gr.direct.forEach(d => quals.push({ nama_quality: d.res || 'Auto', source_quality: d.url }));
+    if (gr.direct.length) info.push(`${gr.direct.length} link langsung (${[...new Set(gr.direct.map(d => srcKind(d.url)))].join('/')})`);
+    const addSet = async (items, meta, label) => {
+        const g = m4sGroup(items, meta), url = await m4sPublish(g, title, onP);
+        quals.push({ nama_quality: g.res || 'Auto', source_quality: url });
+        info.push(label + ': ' + g.info); warn.push(...g.warn);
+    };
+    if (gr.m4s.length) {
+        // sniff init + satu segmen per kemungkinan role dari URL jarak jauh (bila CORS mengizinkan)
+        const probe = [], seenRole = new Set();
+        gr.m4s.forEach(it => { const i = m4sInfo(it.name), k = (i.role || '?') + (i.init ? 'i' : 'm'); if (!seenRole.has(k) && probe.length < 6) { seenRole.add(k); probe.push(it); } });
+        const sn = await Promise.all(probe.map(it => m4sSniffUrl(it.url)));
+        probe.forEach((it, i) => { it.sniff = sn[i]; });
+        await addSet(gr.m4s, {}, 'm4s');
+    }
+    for (const u of gr.mpd) { const m = await mpdFetch(u); warn.push(...m.warn); await addSet(m.items, m.meta, 'dash'); }
+    return { rec: { anime_title: title, thumbnail_episode: gr.cover || undefined, qualities: quals, ...Object.fromEntries(Object.entries(gr.extra || {}).filter(([, v]) => v != null && v !== '')) }, warn, info };
+}
+
+// group lokal/URL -> record format jqBuild
 async function m4sRecord(title, cover, items, onP) {
     const g = m4sGroup(items), url = await m4sPublish(g, title, onP);
-    return { rec: { anime_title: title, thumbnail_episode: cover || undefined, qualities: [{ nama_quality: g.res || 'Auto', source_quality: url }] }, warn: g.warn };
+    return { rec: { anime_title: title, thumbnail_episode: cover || undefined, qualities: [{ nama_quality: g.res || 'Auto', source_quality: url }] }, warn: g.warn, info: [g.info] };
 }
 
 // satu file bisa: 1 objek episode, array episode, atau objek berisi array (data / episodes / ...)
@@ -6650,6 +6954,10 @@ function jqFolder(u) {
 // kategori otomatis: field kategori di JSON > petunjuk di link (folder film/anime) > jumlah episode
 function jqCategory(g, series) {
     const hint = String(g.hint || '').toLowerCase();
+    const xs = hint + ' ' + g.urls.map(u => { try { return decodeURIComponent(new URL(u).pathname); } catch (e) { return u; } }).join(' ').toLowerCase();
+    if (/drakor|kdrama|korean[-\s]?drama|drama[-\s]?korea/.test(xs)) return 'drakor';
+    if (/kartun|cartoon/.test(xs)) return 'kartun';
+    if (/dokumenter|documentary/.test(xs)) return 'dokumenter';
     if (/anime|donghua|aniplay/.test(hint)) return 'anime';
     if (/film|movie|bioskop/.test(hint)) return 'film';
     const path = g.urls.map(u => { try { return decodeURIComponent(new URL(u).pathname); } catch (e) { return u; } }).join(' ').toLowerCase();
@@ -6720,7 +7028,7 @@ const jqOpts = () => ({ tmdb: jqOn('#jq_tm'), ladder: jqOn('#jq_lad') });
 const jqNames = a => a.slice(0, 5).join(', ') + (a.length > 5 ? '…' : '');
 
 // items: [{name, json, qid}]
-async function jqProcess(items, o, bad = [], warns = []) {
+async function jqProcess(items, o, bad = [], warns = [], infos = []) {
     jqBusy = true;
     impBack = 'jq';
     impPre = '';
@@ -6734,6 +7042,7 @@ async function jqProcess(items, o, bad = [], warns = []) {
         });
         if (dead.length && jqHas !== false) await sb.from('json_queue').delete().in('id', dead);
         if (bad.length) impPre += `${bad.length} file gagal / bukan JSON valid: ${jqNames(bad)}\n`;
+        if (infos.length) impPre += `Deteksi otomatis:\n${infos.slice(0, 8).join('\n')}${infos.length > 8 ? '\n…' : ''}\n`;
         if (warns.length) impPre += `Peringatan M4S: ${jqNames(warns)}\n`;
         if (empty.length) impPre += `${empty.length} file tidak berisi data film (tidak ada source_quality): ${jqNames(empty)}\n`;
 
@@ -6780,31 +7089,37 @@ async function jqRun() {
     if (!files.length) return toast('Pilih file JSON atau .m4s dulu');
     jqBusy = true;
     jqFiles = [];
-    const o = jqOpts(), items = [], bad = [], warns = [];
+    const o = jqOpts(), items = [], bad = [], warns = [], infos = [];
     try {
         // Auto-Detect: .m4s (atau nama kosong tapi isi fMP4) dipisah dari .json
-        const segs = files.filter(f => isM4s(f.name)), jsons = files.filter(f => !isM4s(f.name));
+        const isJ = f => /\.json$/i.test(f.name) || /json/i.test(f.type || ''), isSeg = f => isM4s(f.name) || (!isJ(f) && /\.(mp4|m4a|m4v|cmf)$/i.test(f.name));
+        const segs = files.filter(isSeg), jsons = files.filter(f => !isSeg(f));
         prog(.02, 'Membaca file…');
         for (const f of jsons) {
             let j;
             try { j = JSON.parse(await f.text()); } catch (e) { bad.push(f.name); continue; }
-            const ms = !jqRecords(j).length ? m4sFromJson(j) : [];
+            const ms = !jqRecords(j).length ? mediaScan(j) : [];
             if (ms.length) {
-                try {
-                    const recs = [];
-                    for (const m of ms) { const r = await m4sRecord(m.title || guessTitle(m.items[0].url), m.cover, m.items, p => prog(.05 + p * .3, 'Menyusun playlist .m4s…')); recs.push(r.rec); warns.push(...r.warn.map(w => f.name + ': ' + w)); }
-                    items.push({ name: f.name, json: recs });
-                } catch (e) { bad.push(f.name + ' (' + (e.message || e) + ')'); }
+                const recs = [];
+                for (const m of ms) {
+                    const t = m.title || guessTitle(((m.direct[0] || m.m4s[0] || {}).url) || m.mpd[0] || '') || 'Film';
+                    try {
+                        const r = await mediaRecord(m, t, p => prog(.05 + p * .3, 'Menyusun playlist .m4s…'));
+                        recs.push(r.rec); warns.push(...r.warn.map(w => f.name + ': ' + w)); infos.push(`${f.name} · ${t}: ${r.info.join(' | ')}`);
+                    } catch (e) { bad.push(`${f.name} · ${t} (${e.message || e})`); }
+                }
+                if (recs.length) items.push({ name: f.name, json: recs });
             } else items.push({ name: f.name, json: j });
         }
         if (segs.length) {
             try {
                 prog(.05, `Memeriksa ${segs.length} segmen .m4s…`);
-                for (const f of segs) await m4sCheck(f); // semua divalidasi dulu, baru upload
+                const sn = [];
+                for (const f of segs) sn.push(await m4sCheck(f)); // semua divalidasi + dibaca isinya dulu, baru upload
                 const title = ($('#jq_mt') && $('#jq_mt').value.trim()) || guessTitle(segs[0].name.replace(/[-_.]?(init|audio|video|seg(ment)?|chunk)[-_.]?\d*/ig, '')) || 'Film M4S';
-                const r = await m4sRecord(title, null, segs.map(f => ({ name: f.name, file: f })), p => prog(.1 + p * .5, 'Mengupload segmen .m4s…'));
+                const r = await m4sRecord(title, null, segs.map((f, i) => ({ name: f.name, file: f, sniff: sn[i], size: f.size })), p => prog(.1 + p * .5, 'Mengupload segmen .m4s…'));
                 items.push({ name: title + '.m4s', json: [r.rec] });
-                warns.push(...r.warn);
+                warns.push(...r.warn); infos.push(`${title} (file lokal): ${r.info.join(' | ')}`);
             } catch (e) { bad.push('segmen .m4s (' + (e.message || e) + ')'); }
         }
         if (jqHas !== false) {
@@ -6816,7 +7131,7 @@ async function jqRun() {
     } catch (e) { bad.push(e.message || String(e)); }
     jqBusy = false;
     if (!items.length) { impPre = bad.length ? 'Gagal:\n' + bad.join('\n') : ''; return finishImport(bad.length ? 'Tidak ada file yang berhasil diproses.' : 'Tidak ada file yang valid'); }
-    await jqProcess(items, o, bad, warns);
+    await jqProcess(items, o, bad, warns, infos);
 }
 
 async function jqRetry(id) {
@@ -6856,7 +7171,7 @@ async function jqLoad() {
 
 const jqSw = (id, t, s, on = true) => `<div class="srow"><span>${t}<small>${s}</small></span><button class="sw ${on ? 'on' : ''}" id="${id}" role="switch" aria-checked="${on}" onclick="this.classList.toggle('on');this.setAttribute('aria-checked',this.classList.contains('on'))"></button></div>`;
 
-const jqTab = () => `<div class="glass pad"><b>Upload JSON film</b><p class="hint">Pilih satu atau beberapa file .json atau segmen .m4s (video + audio, otomatis dikenali dan disatukan). Nama, thumbnail, link film, resolusi, dan kategori diambil otomatis, lalu file JSON dihapus setelah filmnya masuk. Tab Tambah dan Episode manual tetap ada.</p><input id="jq_f" type="file" accept=".json,.m4s,application/json,video/iso.segment" multiple onchange="jqPick(this)"><input id="jq_mt" placeholder="Judul film (khusus upload file .m4s, opsional)"><div id="jq_sel"></div>
+const jqTab = () => `<div class="glass pad"><b>Upload JSON film</b><p class="hint">Pilih satu atau beberapa file .json atau segmen .m4s / init .mp4. Deteksi pintar membaca isi file: video dan audio terpisah, segmen gabungan, link CDN mp4/m3u8, dan manifest DASH (.mpd) dikenali dan disusun otomatis. Nama, thumbnail, link film, resolusi, dan kategori diambil otomatis, lalu file JSON dihapus setelah filmnya masuk. Tab Tambah dan Episode manual tetap ada.</p><input id="jq_f" type="file" accept=".json,.m4s,.cmfv,.cmfa,.mp4,.m4a,application/json,video/iso.segment" multiple onchange="jqPick(this)"><input id="jq_mt" placeholder="Judul film (khusus upload file .m4s, opsional)"><div id="jq_sel"></div>
 ${jqSw('jq_lad', 'Resolusi otomatis', '144p, 240p, 540p, 720p sampai resolusi tertinggi di JSON')}
 ${jqSw('jq_tm', 'Lengkapi dari TMDB', 'Sinopsis, genre, dan tahun diisi otomatis. Thumbnail dari JSON tidak diganti')}
 <button class="btn glow" style="width:100%" onclick="jqRun()">Upload dan proses</button></div>
@@ -7383,10 +7698,11 @@ async function ntGet() {
     }
 }
 
-function ntClose() {
-    const n = document.getElementById('nt');
+function ntClose(el) {
+    const n = (el && el.nodeType === 1) ? el : document.getElementById('nt');
     if (!n || n.classList.contains('out')) return;
     n.classList.add('out');
+    n._closedAt = Date.now();
     setTimeout(() => n.remove(), 300);
 }
 addEventListener('keydown', e => { if (e.key === 'Escape') ntClose(); });
@@ -7407,9 +7723,9 @@ function ntShow(n) {
     const ok = d.querySelector('.nok');
     if (ok) ok.focus({ preventScroll: true });
     if (secs) {
-        const bar = d.querySelector('.nbar');
-        if (matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(ntClose, secs * 1000);
-        else bar.addEventListener('animationend', ntClose);
+        // timer murni (tidak bergantung animationend / :hover yang bisa macet di mobile & mode efek rendah)
+        d._exp = Date.now() + secs * 1000;
+        setTimeout(() => ntClose(d), secs * 1000);
     }
 }
 
@@ -8095,7 +8411,7 @@ function dtRender(c) {
 <div class="dt-acts"><span class="acts" data-acts></span></div></section>
 <section class="dt-card"><b class="dt-h">Progress Menonton</b><div class="dt-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div><div class="dt-ps"><b>${pct}%</b> Selesai${eps.length ? ` · ${doneN} dari ${eps.length} episode` : ''}</div></section>
 <section class="dt-card"><button class="dt-fold" id="dtFold" aria-expanded="${DTS.open}"><b class="dt-h">Detail lainnya</b>${ic('chev')}</button>
-<dl class="dt-rows" id="dtRows" ${DTS.open ? '' : 'hidden'}>${row('Studio', t.studio)}${row('Label', t.label || (t.type === 'series' ? 'TV' : 'Movie'))}${row('Tags', t.tags || t.category)}${row('Rilis', rel)}${row('Status', stTxt)}${row('Rating', ratingTxt)}${row('Genre', t.genre)}</dl>
+<dl class="dt-rows" id="dtRows" ${DTS.open ? '' : 'hidden'}>${row('Studio', t.studio)}${row('Label', t.label || (t.type === 'series' ? 'TV' : 'Movie'))}${row('Tags', window.NMTax ? NMTax.tagsOf(t).filter(x => x.kind !== 'pick').map(x => x.name).join(', ') : (t.tags || t.category))}${row('Rilis', rel)}${row('Status', stTxt)}${row('Rating', ratingTxt)}${row('Genre', t.genre)}</dl>
 ${me.role === 'admin' ? '<button class="plink dt-edit" id="dtEdit">Edit info judul</button>' : ''}</section>
 ${isS ? `<div class="dt-eh"><h2>Episode (${eps.length})</h2><button class="dt-sq" id="dtView" aria-label="Ganti tampilan"></button><button class="dt-pillb" id="dtSort"></button></div>
 <label class="dt-search"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${P.search}"/></svg><input id="dtQ" type="search" inputmode="search" placeholder="Cari episode… (mis. 15)" autocomplete="off" value="${esc(DTS.q)}" aria-label="Cari episode"></label>
@@ -8492,8 +8808,8 @@ html[data-fx=high] .poster.frm:not(.vis) .frmi::before,html[data-fx=high] .poste
 .fminib button{width:30px;height:30px;border-radius:50%;border:0;background:#000a;color:#fff;font-size:15px;cursor:pointer}
 .av{--h:200;background:linear-gradient(135deg,hsla(var(--h),95%,72%,.6),hsla(calc(var(--h) + 50),90%,62%,.35));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.55);box-shadow:0 4px 14px hsla(var(--h),80%,50%,.25),inset 0 1px 0 rgba(255,255,255,.6);position:relative;overflow:hidden;border-radius:50%}
 .av::after{content:"";position:absolute;left:14%;right:14%;bottom:20%;height:14%;background:radial-gradient(circle at 12% 50%,#ff8fb1aa 0 38%,#0000 40%),radial-gradient(circle at 88% 50%,#ff8fb1aa 0 38%,#0000 40%);pointer-events:none}
-.reco{margin:0 0 18px}.reco h2{margin:6px 0 10px}.reco .row{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}
-.rcard{flex:0 0 clamp(110px,18vw,170px);scroll-snap-align:start;cursor:pointer}.rcard .poster{width:100%;aspect-ratio:2/3}.rcard b{display:block;font-size:.85rem;margin-top:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.rcard small{opacity:.7}
+.reco{margin:0 0 6px}.reco h2{margin:6px 0 10px}.reco .row{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}
+.rcard{flex:0 0 clamp(110px,18vw,170px);width:clamp(110px,18vw,170px);min-width:0;max-width:170px;box-sizing:border-box;overflow:hidden;scroll-snap-align:start;cursor:pointer}.rcard .poster{width:100%;aspect-ratio:2/3}.rcard b{display:block;font-size:.85rem;margin-top:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.rcard small{opacity:.7}
 .seg.adm{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:0;z-index:5;padding:6px}.seg.adm button{flex:1 1 auto}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 #v>.glass.pad{margin-bottom:14px}
@@ -8509,7 +8825,7 @@ html[data-fx=high] .poster.frm:not(.vis) .frmi::before,html[data-fx=high] .poste
 .nsm .ic{display:flex;gap:8px;align-items:center;padding:8px;border-radius:12px;background:#8882}
 @media(min-width:1400px){main#v{max-width:1560px;margin-inline:auto}}
 @media(max-width:600px){.fgrid{grid-template-columns:1fr}.film.mini{width:60vw}}
-@media(min-width:601px) and (max-width:1024px){.rcard{flex-basis:clamp(120px,22vw,170px)}}
+@media(min-width:601px) and (max-width:1024px){.rcard{flex-basis:clamp(120px,22vw,170px);width:clamp(120px,22vw,170px)}}
 /* ===== floating pill + running text sinkron, estetika ===== */
 #fpill{position:fixed;left:50%;top:calc(var(--hh,64px) + 10px);transform:translate(-50%,-8px);z-index:40;display:flex;align-items:center;gap:8px;max-width:min(560px,calc(100vw - 24px));padding:6px 8px 6px 12px;border-radius:var(--pill,999px);border:1px solid var(--bd,rgba(255,255,255,.18));background:rgba(var(--glow,255,255,255),.1);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);box-shadow:0 8px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.25);color:var(--ac2);font:700 .85rem/1 var(--font);opacity:0;pointer-events:none;transition:opacity .35s,transform .35s cubic-bezier(.3,1.4,.4,1)}
 #fpill.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -8593,7 +8909,7 @@ input,textarea,select{border-radius:var(--rs,12px);transition:border-color .2s,b
 // ===== update masif: minimize player, rekomendasi, admin pengguna, ID 5 digit, profil publik, follow, pesan, undangan nobar =====
 (function () {
     const H = document.documentElement, rpc = (n, a) => sb.rpc(n, a || {});
-    const need = e => { if (e && /function|schema cache|does not exist|column/i.test(e.message || '')) toast('Jalankan migrasi_sosial.sql di Supabase SQL Editor dulu'); else if (e) toast(e.message); return !!e; };
+    const need = e => { if (e) { const missing = ['PGRST202', 'PGRST204', 'PGRST205', '42883', '42P01', '42703'].includes(e.code) || /could not find the (function|table)|schema cache/i.test(e.message || ''); toast(missing ? 'Fitur sosial belum terpasang di database (migrasi SQL belum dijalankan)' : (e.message || 'Terjadi kesalahan')); } return !!e; };
     // --- 1. mini player ---
     window.filmMini = on => {
         const f = $('#film'); if (!f) return;
@@ -8622,7 +8938,7 @@ input,textarea,select{border-radius:var(--rs,12px);transition:border-color .2s,b
         const by = {}; titles.forEach(t => (by[(t.category || 'film')] = by[t.category || 'film'] || []).push(t));
         const pick = []; const pools = Object.values(by).map(a => [...a].sort(() => Math.random() - .5));
         for (let i = 0; pick.length < 12 && pools.some(p => p[i]); i++) pools.forEach(p => p[i] && pick.length < 12 && pick.push(p[i]));
-        $('#v').insertAdjacentHTML('afterbegin', `<section class="reco"><h2>${ic('sparkle')} Rekomendasi</h2><div class="row">${pick.map(t => `<div class="rcard" onclick="openTitle('${t.id}')">${poster(t)}<b>${esc(t.title)}</b><small>${esc(catLabel(t) || (t.type === 'series' ? 'Series' : 'Film'))}</small></div>`).join('')}</div></section>`);
+        { const at = $('#nfrows'); if (at) at.insertAdjacentHTML('beforebegin', `<section class="reco nfr"><h2>${ic('sparkle')} Rekomendasi</h2><div class="row">${pick.map(t => `<div class="rcard" onclick="openTitle('${t.id}')">${poster(t)}<b>${esc(t.title)}</b><small>${esc(catLabel(t) || (t.type === 'series' ? 'Series' : 'Film'))}</small></div>`).join('')}</div></section>`); }
     };
     // --- 3. admin: ubah nama & password user ---
     window.admUsr = () => { setTimeout(admUsrLoad, 0); return '<div class="glass pad" id="usr_box"><p class="hint">Memuat pengguna…</p></div>'; };
@@ -8911,7 +9227,8 @@ function annShow(a) {
     el.style.setProperty('--ad', dur + 's');
     const tm = new Date(a.created_at || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     el.innerHTML = `<div class="ai">📢</div><div style="min-width:0"><b class="at">${esc(a.title || 'Pengumuman')}</b><p class="am">${esc(a.message || '')}</p><small class="aw">Pengumuman · ${esc(tm)}</small></div><button class="ax" aria-label="Tutup">✕</button><i class="ab"></i>`;
-    const close = () => { if (el._c) return; el._c = 1; el.classList.add('out'); setTimeout(() => el.remove(), 340); };
+    const close = () => { if (el._c) return; el._c = Date.now(); el.classList.add('out'); setTimeout(() => el.remove(), 340); };
+    el._exp = Date.now() + dur * 1000; el._close = close;
     el.querySelector('.ax').onclick = close;
     w.prepend(el);
     while (w.children.length > 3) w.lastElementChild.remove();
@@ -8997,6 +9314,201 @@ async function annSend() {
     new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-fx', 'data-ultra'] });
     if (document.body) sync(); else addEventListener('DOMContentLoaded', sync);
 })();
+</script>
+<script>
+/* ===== Notification watchdog: pastikan semua notif (toast, pengumuman, popup update) pasti hilang di mobile ===== */
+(function () {
+    const sweep = () => {
+        const now = Date.now();
+        try {
+            const t = document.getElementById('toast');
+            if (t && t.classList.contains('on') && typeof toastExp !== 'undefined' && toastExp && now > toastExp + 150) t.classList.remove('on');
+        } catch (e) { }
+        document.querySelectorAll('.ann').forEach(el => {
+            if (el._c) { if (now - el._c > 600) el.remove(); }
+            else if (el._exp && now > el._exp && el._close) el._close();
+        });
+        const nt = document.getElementById('nt');
+        if (nt) {
+            if (nt.classList.contains('out')) { if (nt._closedAt && now - nt._closedAt > 600) nt.remove(); }
+            else if (nt._exp && now > nt._exp) ntClose(nt);
+        }
+        const w = document.getElementById('annw');
+        if (w && !w.children.length) w.remove();
+    };
+    setInterval(sweep, 1000);
+    ['visibilitychange', 'pageshow', 'focus', 'resume'].forEach(ev => addEventListener(ev, sweep));
+    document.addEventListener('visibilitychange', sweep);
+})();
+</script>
+<style id="nm-nwb-small">
+/* label BARU diperkecil (override agar konsisten di semua baris, termasuk Rekomendasi) */
+.poster .nwb,.rcard .poster .nwb{font-size:.54rem!important;font-weight:800!important;line-height:1.2!important;letter-spacing:.03em!important;padding:2px 7px!important;top:7px!important;left:7px!important;border-radius:99px!important}
+.poster .tag + .nwb{top:25px!important}
+.poster .tag{font-size:.54rem!important;padding:2px 7px!important}
+</style>
+<style id="nm-tax">
+.chip small{opacity:.6;margin-left:6px;font-size:.72em;font-weight:700}
+.cgl{flex:none;align-self:center;font:800 .6rem var(--font);text-transform:uppercase;letter-spacing:.09em;color:var(--mut);padding:0 2px 0 10px;white-space:nowrap}
+.chips.dcw{display:flex;flex-wrap:wrap;gap:8px;max-height:92px;overflow:hidden;margin:10px 0 0;padding:0;transition:max-height .35s ease}
+.chips.dcw.open{max-height:1400px}
+.dcbar{display:flex;align-items:center;gap:10px;margin:10px 2px 8px;flex-wrap:wrap}
+.dcbar small{color:var(--mut);margin-right:auto}
+.dcbar select{width:auto;margin:0;padding:8px 12px;font-size:.85rem}
+.pchips span.ptg{cursor:pointer}
+</style>
+<script>
+/* ===== NMTax: tag & kategori otomatis dari database (gaya Netflix) ===== */
+window.NMTax = (function () {
+    const GEN = {
+        'action': 'Aksi', 'adventure': 'Petualangan', 'animation': 'Animasi', 'comedy': 'Komedi', 'crime': 'Kriminal',
+        'documentary': 'Dokumenter', 'family': 'Keluarga', 'fantasy': 'Fantasi', 'history': 'Sejarah', 'horror': 'Horor',
+        'music': 'Musik', 'musical': 'Musik', 'mystery': 'Misteri', 'romance': 'Romantis', 'romantic': 'Romantis',
+        'science fiction': 'Fiksi Ilmiah', 'sci-fi': 'Fiksi Ilmiah', 'scifi': 'Fiksi Ilmiah', 'sci fi': 'Fiksi Ilmiah',
+        'tv movie': 'Film TV', 'war': 'Perang', 'kids': 'Anak', 'children': 'Anak', 'anak-anak': 'Anak',
+        'reality': 'Reality', 'talk': 'Talk Show', 'news': 'Berita', 'soap': 'Sinetron', 'sports': 'Olahraga', 'sport': 'Olahraga',
+        'biography': 'Biografi', 'martial arts': 'Bela Diri', 'supernatural': 'Supernatural', 'superhero': 'Superhero',
+        'action & adventure': ['Aksi', 'Petualangan'], 'sci-fi & fantasy': ['Fiksi Ilmiah', 'Fantasi'], 'war & politics': ['Perang', 'Politik']
+    };
+    const INFER = [
+        [/horor|horror|hantu|ghost|setan|kuntilanak|zombie|demon/, 'Horor'], [/komedi|comedy|kocak|lucu/, 'Komedi'],
+        [/\baksi\b|action|pertarungan|agen rahasia|\bspy\b/, 'Aksi'], [/romans|cinta|jatuh cinta|love story/, 'Romantis'],
+        [/fiksi ilmiah|sci-fi|alien|luar angkasa|robot|masa depan/, 'Fiksi Ilmiah'], [/fantasi|fantasy|sihir|penyihir|wizard|naga|dragon/, 'Fantasi'],
+        [/kriminal|crime|detektif|detective|pembunuh|murder|polisi/, 'Kriminal'], [/misteri|mystery/, 'Misteri'],
+        [/petualangan|adventure/, 'Petualangan'], [/animasi|animation|kartun|cartoon/, 'Animasi'],
+        [/perang|\bwar\b|tentara/, 'Perang'], [/keluarga|family/, 'Keluarga'], [/thriller|menegangkan/, 'Thriller'], [/\bdrama\b/, 'Drama']
+    ];
+    const STATUS = { ongoing: 'Sedang Tayang', completed: 'Tamat', upcoming: 'Segera Tayang' };
+    const cap = x => String(x).trim().replace(/\S+/g, w => /^[A-Z0-9&]{2,4}$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    const arr = v => [].concat(v);
+    const normGenre = (raw, re) => {
+        const out = [];
+        String(raw || '').split(re || /[,;|\/]+/).forEach(p => {
+            p = p.trim(); if (!p) return;
+            const k = p.toLowerCase();
+            if (GEN[k]) { out.push(...arr(GEN[k])); return; }
+            if (/\s&\s/.test(p)) { p.split(/\s&\s/).forEach(x => { x = x.trim(); if (x) out.push(...arr(GEN[x.toLowerCase()] || cap(x))); }); return; }
+            out.push(cap(p));
+        });
+        return out;
+    };
+    const L0 = () => (typeof titles !== 'undefined' ? titles : []);
+    let popAt = 0, popN = -1, popSet = new Set();
+    const ensure = () => {
+        const L = L0(), now = Date.now();
+        if (popN === L.length && now - popAt < 30000) return;
+        popN = L.length; popAt = now;
+        const vc = typeof vcount !== 'undefined' ? vcount : {};
+        const top = L.filter(t => (vc[t.id] || 0) > 0).sort((a, b) => (vc[b.id] || 0) - (vc[a.id] || 0));
+        popSet = new Set(top.slice(0, Math.max(3, Math.ceil(L.length * .15))).map(t => t.id));
+    };
+    const tagsOf = t => {
+        ensure();
+        const out = [], seen = new Set();
+        const add = (name, kind) => { if (!name) return; const key = String(name).toLowerCase(); if (seen.has(key)) return; seen.add(key); out.push({ name, kind, key }); };
+        if (typeof isNewTitle === 'function' && isNewTitle(t)) add('Baru', 'pick');
+        if (popSet.has(t.id)) add('Populer', 'pick');
+        const r = typeof ratings !== 'undefined' ? ratings[t.id] : null;
+        if (r && r.avg >= 4) add('Rating Tinggi', 'pick');
+        add(t.type === 'series' ? 'Series' : 'Film', 'type');
+        const cat = String(t.category || '').trim();
+        if (cat && cat.toLowerCase() !== 'film') add(cap(cat), 'cat');
+        if (STATUS[t.status]) add(STATUS[t.status], 'status');
+        const gs = normGenre(t.genre);
+        gs.forEach(g => add(g, 'genre'));
+        if (!gs.length) {
+            const txt = ((t.title || '') + ' ' + (t.description || '')).toLowerCase(), inf = [];
+            INFER.forEach(([re, g]) => { if (re.test(txt) && inf.length < 3) inf.push(g); });
+            inf.forEach(g => add(g, 'genre'));
+        }
+        normGenre(t.tags, /[,;|#]+/).forEach(g => add(g, 'tag'));
+        if (t.label && !/^(tv|movie|film)$/i.test(String(t.label).trim())) add(cap(t.label), 'tag');
+        if (t.studio) add(String(t.studio).trim(), 'studio');
+        const y = +t.year; if (y >= 1950) add(Math.floor(y / 10) * 10 + '-an', 'decade');
+        return out;
+    };
+    const index = L => {
+        const m = new Map();
+        L.forEach(t => tagsOf(t).forEach(x => { let e = m.get(x.key); if (!e) m.set(x.key, e = { ...x, items: [] }); e.items.push(t); }));
+        const by = k => [...m.values()].filter(e => e.kind === k);
+        const cnt = (a, b) => b.items.length - a.items.length || a.name.localeCompare(b.name);
+        const groups = [
+            ['Pilihan', by('pick')], ['Jenis', by('type').sort(cnt)], ['Kategori', by('cat').sort(cnt)], ['Status', by('status').sort(cnt)],
+            ['Genre', by('genre').sort(cnt)], ['Tahun', by('decade').sort((a, b) => b.name.localeCompare(a.name))],
+            ['Tag', by('tag').sort(cnt).slice(0, 20)], ['Studio', by('studio').filter(e => e.items.length >= 2).sort(cnt).slice(0, 12)]
+        ].filter(g => g[1].length);
+        return { map: m, groups };
+    };
+    const grp = (ix, n) => (ix.groups.find(g => g[0] === n) || [0, []])[1];
+    const btn = e => `<button class="chip" data-n="${esc(e.name)}" onclick="nfGo(this.dataset.n)">${esc(e.name)}</button>`;
+    const api = {
+        tagsOf, index, normGenre,
+        genreMap(L, out) { L.forEach(t => tagsOf(t).forEach(x => { if (x.kind === 'genre') (out[x.name] = out[x.name] || []).push(t); })); return out; },
+        pillsHtml(L) {
+            const ix = index(L);
+            const list = [...grp(ix, 'Pilihan').filter(e => e.name !== 'Rating Tinggi'), ...grp(ix, 'Jenis'), ...grp(ix, 'Kategori'), ...grp(ix, 'Status'), ...grp(ix, 'Genre').slice(0, 12), ...grp(ix, 'Tahun').slice(0, 3)];
+            return `<nav class="nfpills row" aria-label="Kategori"><button class="chip" onclick="nfGo('')">Semua</button>${list.map(btn).join('')}</nav>`;
+        },
+        extraRows(L) {
+            const ix = index(L), rows = [];
+            grp(ix, 'Status').forEach(e => e.items.length >= 2 && rows.push({ ico: 'clock', name: e.name, l: e.items, g: e.name }));
+            grp(ix, 'Tag').forEach(e => e.items.length >= 3 && rows.push({ ico: 'film', name: e.name, l: e.items, g: e.name }));
+            grp(ix, 'Studio').forEach(e => e.items.length >= 3 && rows.push({ ico: 'film', name: 'Studio ' + e.name, l: e.items, g: e.name }));
+            grp(ix, 'Tahun').slice(0, 2).forEach(e => e.items.length >= 4 && rows.push({ ico: 'clock', name: 'Rilis ' + e.name, l: e.items, g: e.name }));
+            return rows;
+        },
+        badge(t) {
+            const c = String(t.category || '').trim(), s = t.type === 'series';
+            const txt = c && c.toLowerCase() !== 'film' ? cap(c) + (s ? ' · Series' : '') : (s ? 'Series' : '');
+            return txt ? `<em class="tag">${esc(txt)}</em>` : '';
+        },
+        chipsHtml(t) {
+            return tagsOf(t).filter(x => ['cat', 'genre', 'decade', 'status', 'tag'].includes(x.kind)).slice(0, 7)
+                .map(x => `<span class="ptg" data-n="${esc(x.name)}" onclick="nfGo(this.dataset.n)">${esc(x.name)}</span>`).join('');
+        },
+        catOptions() {
+            const set = new Set(['film', 'anime', 'drama', 'drakor', 'kartun', 'dokumenter']);
+            L0().forEach(t => t.category && set.add(String(t.category).toLowerCase().trim()));
+            return [...set].map(c => `<option value="${esc(c)}"></option>`).join('');
+        }
+    };
+    return api;
+})();
+
+window.nfGo = function (g) { Promise.resolve(go('discover')).then(() => views.discover('', g || 'Semua')); };
+
+views.discover = function (q = '', g = 'Semua') {
+    const L = L0d(), ix = NMTax.index(L);
+    const sel = new Set(g && g !== 'Semua' ? [String(g).toLowerCase()] : []);
+    let sort = 'new', qq = String(q || '').toLowerCase();
+    const tk = new Map(L.map(t => [t.id, NMTax.tagsOf(t)]));
+    const rt = t => (typeof ratings !== 'undefined' && ratings[t.id]) ? ratings[t.id].avg : 0;
+    const vw = t => (typeof vcount !== 'undefined' && vcount[t.id]) || 0;
+    const SORT = {
+        new: (a, b) => (Date.parse(b.created_at) || 0) - (Date.parse(a.created_at) || 0), pop: (a, b) => vw(b) - vw(a),
+        rate: (a, b) => rt(b) - rt(a), year: (a, b) => (+b.year || 0) - (+a.year || 0), az: (a, b) => a.title.localeCompare(b.title)
+    };
+    const chips = () => `<button class="chip ${sel.size ? '' : 'on'}" data-k="">Semua</button>` + ix.groups.map(([gn, a]) => `<span class="cgl">${gn}</span>` + a.map(e => `<button class="chip ${sel.has(e.key) ? 'on' : ''}" data-k="${esc(e.key)}">${esc(e.name)}<small>${e.items.length}</small></button>`).join('')).join('');
+    const filt = () => L.filter(t => {
+        const tg = tk.get(t.id);
+        if ([...sel].some(k => !tg.some(x => x.key === k))) return false;
+        return !qq || ((t.title || '') + ' ' + tg.map(x => x.name).join(' ')).toLowerCase().includes(qq);
+    }).sort(SORT[sort]);
+    $('#v').innerHTML = `<div class="sbox">${ic('search')}<input id="q" placeholder="Cari judul, genre, kategori..." value="${esc(q)}" autocomplete="off"></div><div class="chips dcw" id="dc">${chips()}</div><div class="dcbar"><small id="dcn"></small><button class="btn sm ghost" id="dcm">Semua filter ▾</button><select id="dsort" aria-label="Urutkan"><option value="new">Terbaru</option><option value="pop">Terpopuler</option><option value="rate">Rating tertinggi</option><option value="year">Tahun rilis</option><option value="az">A–Z</option></select></div><div class="grid" id="gr"></div>`;
+    const paint = () => { const r = filt(); $('#gr').innerHTML = r.map(poster).join('') || empty('Ga ketemu'); $('#dcn').textContent = r.length + ' judul'; };
+    $('#q').oninput = e => { qq = e.target.value.toLowerCase(); paint(); };
+    $('#dsort').onchange = e => { sort = e.target.value; paint(); };
+    $('#dcm').onclick = function () { const o = $('#dc').classList.toggle('open'); this.textContent = o ? 'Ringkas ▴' : 'Semua filter ▾'; };
+    $('#dc').onclick = e => {
+        const b = e.target.closest('.chip'); if (!b) return;
+        const k = b.dataset.k;
+        if (!k) sel.clear(); else if (sel.has(k)) sel.delete(k); else sel.add(k);
+        $('#dc').querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.k ? sel.has(c.dataset.k) : !sel.size));
+        paint();
+    };
+    paint();
+};
+function L0d() { return typeof titles !== 'undefined' ? titles : []; }
 </script>
 </body>
 </html>
