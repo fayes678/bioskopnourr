@@ -1876,7 +1876,7 @@ html:not([data-fx=high]) .bg,html:not([data-fx=high]) .beam,html:not([data-fx=hi
   var coarse = matchMedia('(pointer: coarse)').matches;
   var q = ls.nm_perf;
   /* KUNCI GLOBAL ULTRA: true = Ultra terkunci untuk semua pengguna, false = terbuka */
-  window.NM_ULTRA_LOCKED = true;
+  window.NM_ULTRA_LOCKED = false;
   var ul = q === 'ultra';
   if (ul && window.NM_ULTRA_LOCKED) { ul = false; q = 'high'; ls.nm_perf = 'high'; }
   if (ul) { q = 'high'; d.dataset.ultra = '1'; }
@@ -3223,6 +3223,7 @@ function loginView(reg = false) {
         if (u.length < 3 || p.length < 6)
             return toast('Username min 3, password min 6 ya');
         const reg = regMode;
+        if (reg) window.__nmReg = true; // cegah auto-login saat daftar
         const r = reg ? await sb.auth.signUp({
             email: mail(u),
             password: p,
@@ -3231,10 +3232,24 @@ function loginView(reg = false) {
             email: mail(u),
             password: p
         });
-        if (r.error)
+        if (r.error) {
+            window.__nmReg = false;
             return toast(r.error.message.includes('Invalid') ? 'Username / password salah' : r.error.message);
-        if (reg && !r.data.session)
-            return toast('Daftar OK. Matikan "Confirm email" di Supabase lalu login');
+        }
+        if (reg) {
+            // daftar sukses: akhiri sesi otomatis, arahkan ke tampilan Masuk, user wajib login ulang
+            try { await sb.auth.signOut(); } catch (e) { }
+            me = null;
+            window.__nmReg = false;
+            loginView(false);
+            setTimeout(() => {
+                const uu = $('#u'), pp = $('#p');
+                if (uu) { uu.value = ''; }
+                if (pp) { pp.value = ''; }
+                if (uu) uu.focus();
+            }, 520);
+            return toast('Pendaftaran berhasil! Silakan masuk dengan akun barumu');
+        }
         boot();
     };
     $('#go').onclick = submit;
@@ -4031,16 +4046,18 @@ ${row('Keluar', 'Akhiri sesi di perangkat ini', `<button class="btn sm danger" o
         loadStats();
     },
     async admin(sec = 'cat', q = '') {
-        const S = [['cat', 'Katalog', 'film'], ['add', 'Tambah', 'sparkle'], ['ep', 'Episode', 'tv'], ['jq', 'Upload JSON', 'film'], ['imp', 'Import', 'down'], ['fb', 'Masukan', 'mail'], ['notice', 'Update', 'sparkle'], ['maint', 'Maintenance', 'tool']];
+        const S = [['cat', 'Katalog', 'film'], ['add', 'Tambah', 'sparkle'], ['ep', 'Episode', 'tv'], ['jq', 'Upload JSON', 'film'], ['imp', 'Import', 'down'], ['fb', 'Masukan', 'mail'], ['notice', 'Update', 'sparkle'], ['maint', 'Maintenance', 'tool'], ['ann', 'Pengumuman', 'mail'], ['usr', 'Pengguna', 'sparkle']];
         const f = (l, c) => `<label class="fld"><span>${l}</span>${c}</label>`;
         const sers = titles.filter(t => t.type === 'series');
         const body = {
+            usr: () => admUsr(),
             cat: () => `<div class="sbox">${ic('search')}<input id="aq" placeholder="Cari di katalog..." value="${esc(q)}" autocomplete="off"></div><p class="hint">${titles.length} judul · ${sers.length} series</p><div id="alist">${adminList(q)}</div>`,
             add: () => `<div class="glass pad"><div class="fgrid">${f('Judul', '<input id="a_t">')}${f('Jenis', '<select id="a_ty"><option value="movie">Film</option><option value="series">Series</option></select>')}${f('Tahun', '<input id="a_y" type="number">')}${f('Genre (pisah koma)', '<input id="a_g">')}${f('Kategori', '<select id="a_cat"><option value="film">Film</option><option value="anime">Anime</option></select>')}</div>${f('Deskripsi', '<textarea id="a_d"></textarea>')}<div class="fgrid">${f('Video (link .mp4/.m3u8 atau upload)', '<input id="a_v"><input id="a_vf" type="file" accept="video/*">')}${f('Thumbnail (link atau upload)', '<input id="a_th"><input id="a_thf" type="file" accept="image/*">')}</div><button class="btn glow" style="width:100%" onclick="addTitle()">Simpan judul</button></div>`,
             ep: () => sers.length ? `<div class="glass pad"><div class="fgrid">${f('Series', `<select id="e_t">${sers.map(t => `<option value="${t.id}">${esc(t.title)}</option>`).join('')}</select>`)}${f('Season', '<input id="e_s" type="number" placeholder="1">')}${f('Episode ke', '<input id="e_n" type="number">')}${f('Judul episode', '<input id="e_nm">')}</div>${f('Video (link atau upload)', '<input id="e_v"><input id="e_vf" type="file" accept="video/*">')}${f('Thumbnail (opsional)', '<input id="e_th">')}<button class="btn glow" style="width:100%" onclick="addEp()">Simpan episode</button></div>` : empty('Belum ada series. Tambah dulu di tab Tambah'),
             fb: () => `<div id="fblist">${skel(2)}</div>`,
             notice: () => noticeForm(),
             maint: () => maintForm(),
+            ann: () => annForm(),
             imp: () => impTab(),
             jq: () => jqTab()
         }[sec]();
@@ -4048,6 +4065,7 @@ ${row('Keluar', 'Akhiri sesi di perangkat ini', `<button class="btn sm danger" o
         if (sec === 'fb') loadFb();
         if (sec === 'notice') loadNotice();
         if (sec === 'maint') loadMaint();
+        if (sec === 'ann') annLoad();
         if (sec === 'jq') { jqLoad(); jqShow(); }
         const aq = $('#aq');
         if (aq) aq.oninput = e => { $('#alist').innerHTML = adminList(e.target.value); };
@@ -5730,7 +5748,8 @@ function av(a, size = 40) {
             : /^https?:/.test(a || '')
             ? `<img src="${esc(a)}" alt="" loading="lazy">`
             : avatarSVG('kucing');
-    return `<span class="av" style="width:${size}px;height:${size}px">${inner}</span>`;
+    let hh = 0; String(a || 'x').split('').forEach(c => hh = (hh * 31 + c.charCodeAt(0)) % 360);
+    return `<span class="av" style="width:${size}px;height:${size}px;--h:${hh}">${inner}</span>`;
 }
 
 async function setAvatar(val) {
@@ -6479,6 +6498,113 @@ function jqShow() {
 
 const jqMissing = e => !!e && (e.code === '42P01' || e.code === 'PGRST205' || /does not exist|schema cache|json_queue/i.test(e.message || ''));
 
+// ===== M4S (DASH/HLS fMP4 segment): auto-detect, grouping video+audio, satu referensi JSON valid =====
+// Segmen .m4s tidak bisa diputar sendiri: dibuat playlist HLS (EXT-X-MAP + segmen) + master video/audio, lalu hanya link master yang masuk katalog.
+const M4S_RE = /\.m4s(\?|#|$)/i, M4S_BOX = ['ftyp', 'styp', 'moof', 'moov', 'sidx', 'mdat', 'free', 'emsg'];
+const M4S_BUCKET = 'videos', M4S_DUR = 4, M4S_MAXMB = 200;
+const isM4s = n => M4S_RE.test(String(n || ''));
+
+// deteksi peran dari nama/key: audio vs video, init vs media, nomor urut, resolusi
+function m4sInfo(name) {
+    const n = decodeURIComponent(String(name || '')).split(/[?#]/)[0].split('/').pop().toLowerCase();
+    const full = String(name || '').toLowerCase();
+    const role = /(^|[^a-z])(audio|aud|mp4a|snd)([^a-z]|$)|[-_.]a(\d|[-_.])|stream[-_]?1([^0-9]|$)|(^|[-_])a[-_]?\d+\.m4s/.test(n) || /\/audio\//.test(full) ? 'audio' : 'video';
+    const init = /init|header|\bmap\b|^0\.m4s$/.test(n);
+    const nums = (n.replace(/\.m4s$/, '').replace(/\d{3,4}p/, '').match(/\d+/g) || []).map(Number);
+    return { role, init, idx: init ? -1 : (nums.length ? nums[nums.length - 1] : 0), res: ((n.match(/(\d{3,4})p/) || [])[1] || '') };
+}
+
+// items: [{name, url?, file?}] -> {video:{init,segs[]}, audio:{...}, res, warn[]}; lempar Error bila struktur tidak valid
+function m4sGroup(items) {
+    const g = { video: { init: null, segs: [] }, audio: { init: null, segs: [] }, res: '', warn: [] }, seen = new Set();
+    items.forEach(it => {
+        const i = m4sInfo(it.name), t = g[i.role], k = i.role + (i.init ? ':init' : ':' + i.idx);
+        if (seen.has(k) && !i.init) return g.warn.push('duplikat dilewati: ' + it.name);
+        seen.add(k);
+        if (i.res && !g.res) g.res = i.res + 'p';
+        if (i.init) t.init = it; else t.segs.push({ ...it, idx: i.idx });
+    });
+    ['video', 'audio'].forEach(r => {
+        const t = g[r];
+        t.segs.sort((a, b) => a.idx - b.idx);
+        for (let x = 1; x < t.segs.length; x++) if (t.segs[x].idx - t.segs[x - 1].idx > 1) throw new Error(`segmen ${r} terputus: nomor ${t.segs[x - 1].idx} lalu ${t.segs[x].idx} (ada yang hilang)`);
+    });
+    if (!g.video.segs.length) throw new Error('tidak ada segmen video .m4s');
+    if (!g.video.init) g.warn.push('init segment video tidak ditemukan (init-*.m4s / init.mp4): pemutaran bisa gagal');
+    if (g.audio.segs.length) {
+        if (!g.audio.init) g.warn.push('init segment audio tidak ditemukan');
+        if (Math.abs(g.audio.segs.length - g.video.segs.length) > 1) g.warn.push(`jumlah segmen audio (${g.audio.segs.length}) beda dengan video (${g.video.segs.length})`);
+    } else g.warn.push('tidak ada track audio (video tanpa suara)');
+    return g;
+}
+
+// validasi isi biner: kotak ISO-BMFF (ftyp/styp/moof/moov/...) di byte 4-8
+async function m4sCheck(f) {
+    if (!f.size) throw new Error(f.name + ': file kosong');
+    if (f.size > M4S_MAXMB * 1048576) throw new Error(`${f.name}: lebih dari ${M4S_MAXMB} MB`);
+    const b = new Uint8Array(await f.slice(0, 12).arrayBuffer());
+    if (b.length < 8 || !M4S_BOX.includes(String.fromCharCode(b[4], b[5], b[6], b[7]))) throw new Error(f.name + ': bukan segmen fMP4 yang valid');
+}
+
+const m4sList = (t, dur) => '#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-TARGETDURATION:' + Math.ceil(dur) + '\n#EXT-X-MEDIA-SEQUENCE:' + (t.segs[0].idx || 0) + '\n#EXT-X-PLAYLIST-TYPE:VOD\n'
+    + (t.init ? '#EXT-X-MAP:URI="' + t.init.url + '"\n' : '') + t.segs.map(x => '#EXTINF:' + dur.toFixed(3) + ',\n' + x.url).join('\n') + '\n#EXT-X-ENDLIST\n';
+
+// upload dengan retry + rollback: bila satu gagal, semua yang sudah terupload dihapus (tidak ada upload parsial)
+async function m4sPublish(g, title, onP) {
+    const base = 'm4s/' + Date.now().toString(36) + '_' + String(title || 'film').replace(/[^\w-]+/g, '_').slice(0, 40), done = [], st = sb.storage.from(M4S_BUCKET);
+    const put = async (path, body, type) => {
+        let err;
+        for (let a = 0; a < 3; a++) {
+            const r = await st.upload(path, body, { contentType: type, upsert: false });
+            if (!r.error) { done.push(path); return st.getPublicUrl(path).data.publicUrl; }
+            err = r.error; await new Promise(r => setTimeout(r, 600 * (a + 1)));
+        }
+        throw new Error(`${path.split('/').pop()}: ${err.message || err}`);
+    };
+    try {
+        const files = [];
+        ['video', 'audio'].forEach(r => [g[r].init, ...g[r].segs].forEach(x => { if (x && x.file && !x.url) files.push({ x, r }); }));
+        let n = 0;
+        await pool(files, 3, async ({ x, r }) => { x.url = await put(`${base}/${r}/${x.name.replace(/[^\w.-]/g, '_')}`, x.file, 'video/iso.segment'); onP && onP(++n / (files.length + 3)); });
+        const bad = ['video', 'audio'].flatMap(r => [g[r].init, ...g[r].segs]).filter(x => x && !okUrl(x.url));
+        if (bad.length) throw new Error('link segmen tidak valid: ' + bad[0].name);
+        const pl = async (r, k) => g[r].segs.length ? await put(`${base}/${k}.m3u8`, new Blob([m4sList(g[r], M4S_DUR)], { type: 'application/vnd.apple.mpegurl' }), 'application/vnd.apple.mpegurl') : null;
+        const vu = await pl('video', 'video'), au = await pl('audio', 'audio');
+        const master = '#EXTM3U\n#EXT-X-VERSION:7\n' + (au ? '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,URI="' + au + '"\n' : '')
+            + '#EXT-X-STREAM-INF:BANDWIDTH=2000000' + (au ? ',AUDIO="aud"' : '') + '\n' + vu + '\n';
+        return await put(`${base}/master.m3u8`, new Blob([master], { type: 'application/vnd.apple.mpegurl' }), 'application/vnd.apple.mpegurl');
+    } catch (e) {
+        if (done.length) { try { await st.remove(done); } catch (x) { } }
+        throw e;
+    }
+}
+
+// JSON berisi URL .m4s (objek/array/nested) -> daftar group; tiap group = satu film/episode
+function m4sFromJson(j) {
+    const out = [], walk = (o, key) => {
+        if (!o || typeof o !== 'object') return;
+        const urls = [];
+        const grab = (v, k) => { if (typeof v === 'string' && isM4s(v)) urls.push({ name: (k && !/\//.test(v.split('/').pop()) ? k + '_' : '') + v, url: v.trim() }); else if (v && typeof v === 'object' && !Array.isArray(v) && (v.url || v.src)) grab(v.url || v.src, k); };
+        const flat = Array.isArray(o) ? o.map((v, i) => [String(i), v]) : Object.entries(o);
+        flat.forEach(([k, v]) => { if (Array.isArray(v)) v.forEach(x => grab(x, k)); else grab(v, k); });
+        if (urls.length) {
+            // nama = path asli URL, tapi key (video/audio/init) ikut dipakai bila URL tidak informatif
+            const items = urls.map(u => ({ name: u.name.startsWith('http') ? u.name : u.name, url: u.url }));
+            out.push({ title: String(o.title || o.judul || o.name || o.nama_anime || key || '').trim(), cover: o.thumbnail || o.poster || o.gambar_anime || null, items });
+        }
+        flat.forEach(([k, v]) => { if (v && typeof v === 'object') (Array.isArray(v) ? v : [v]).forEach(x => walk(x, k)); });
+    };
+    walk(j, '');
+    // jangan hitung dobel: ambil node terdalam yang punya URL
+    return out.filter((a, i) => !out.some((b, k) => k !== i && b.items.length < a.items.length && b.items.every(x => a.items.some(y => y.url === x.url))));
+}
+
+// group -> record format jqBuild (qualities[].source_quality = link master m3u8)
+async function m4sRecord(title, cover, items, onP) {
+    const g = m4sGroup(items), url = await m4sPublish(g, title, onP);
+    return { rec: { anime_title: title, thumbnail_episode: cover || undefined, qualities: [{ nama_quality: g.res || 'Auto', source_quality: url }] }, warn: g.warn };
+}
+
 // satu file bisa: 1 objek episode, array episode, atau objek berisi array (data / episodes / ...)
 function jqRecords(j) {
     const isRec = o => !!o && typeof o === 'object' && !Array.isArray(o) && (Array.isArray(o.qualities) || !!o.source_quality);
@@ -6594,7 +6720,7 @@ const jqOpts = () => ({ tmdb: jqOn('#jq_tm'), ladder: jqOn('#jq_lad') });
 const jqNames = a => a.slice(0, 5).join(', ') + (a.length > 5 ? '…' : '');
 
 // items: [{name, json, qid}]
-async function jqProcess(items, o, bad = []) {
+async function jqProcess(items, o, bad = [], warns = []) {
     jqBusy = true;
     impBack = 'jq';
     impPre = '';
@@ -6607,7 +6733,8 @@ async function jqProcess(items, o, bad = []) {
             else { empty.push(it.name); if (it.qid) dead.push(it.qid); }
         });
         if (dead.length && jqHas !== false) await sb.from('json_queue').delete().in('id', dead);
-        if (bad.length) impPre += `${bad.length} file bukan JSON valid: ${jqNames(bad)}\n`;
+        if (bad.length) impPre += `${bad.length} file gagal / bukan JSON valid: ${jqNames(bad)}\n`;
+        if (warns.length) impPre += `Peringatan M4S: ${jqNames(warns)}\n`;
         if (empty.length) impPre += `${empty.length} file tidak berisi data film (tidak ada source_quality): ${jqNames(empty)}\n`;
 
         const rows = jqBuild(records, o);
@@ -6650,23 +6777,46 @@ async function jqProcess(items, o, bad = []) {
 async function jqRun() {
     if (jqBusy) return;
     const files = [...jqFiles];
-    if (!files.length) return toast('Pilih file JSON dulu');
+    if (!files.length) return toast('Pilih file JSON atau .m4s dulu');
     jqBusy = true;
     jqFiles = [];
-    const o = jqOpts(), items = [], bad = [];
-    prog(.02, 'Membaca file…');
-    for (const f of files) {
-        try { items.push({ name: f.name, json: JSON.parse(await f.text()) }); } catch (e) { bad.push(f.name); }
-    }
-    if (jqHas !== false) {
-        for (const it of items) {
-            const { data, error } = await sb.from('json_queue').insert({ filename: it.name, content: it.json }).select('id').single();
-            if (error) { if (jqMissing(error)) { jqHas = false; break; } } else it.qid = data.id;
+    const o = jqOpts(), items = [], bad = [], warns = [];
+    try {
+        // Auto-Detect: .m4s (atau nama kosong tapi isi fMP4) dipisah dari .json
+        const segs = files.filter(f => isM4s(f.name)), jsons = files.filter(f => !isM4s(f.name));
+        prog(.02, 'Membaca file…');
+        for (const f of jsons) {
+            let j;
+            try { j = JSON.parse(await f.text()); } catch (e) { bad.push(f.name); continue; }
+            const ms = !jqRecords(j).length ? m4sFromJson(j) : [];
+            if (ms.length) {
+                try {
+                    const recs = [];
+                    for (const m of ms) { const r = await m4sRecord(m.title || guessTitle(m.items[0].url), m.cover, m.items, p => prog(.05 + p * .3, 'Menyusun playlist .m4s…')); recs.push(r.rec); warns.push(...r.warn.map(w => f.name + ': ' + w)); }
+                    items.push({ name: f.name, json: recs });
+                } catch (e) { bad.push(f.name + ' (' + (e.message || e) + ')'); }
+            } else items.push({ name: f.name, json: j });
         }
-    }
+        if (segs.length) {
+            try {
+                prog(.05, `Memeriksa ${segs.length} segmen .m4s…`);
+                for (const f of segs) await m4sCheck(f); // semua divalidasi dulu, baru upload
+                const title = ($('#jq_mt') && $('#jq_mt').value.trim()) || guessTitle(segs[0].name.replace(/[-_.]?(init|audio|video|seg(ment)?|chunk)[-_.]?\d*/ig, '')) || 'Film M4S';
+                const r = await m4sRecord(title, null, segs.map(f => ({ name: f.name, file: f })), p => prog(.1 + p * .5, 'Mengupload segmen .m4s…'));
+                items.push({ name: title + '.m4s', json: [r.rec] });
+                warns.push(...r.warn);
+            } catch (e) { bad.push('segmen .m4s (' + (e.message || e) + ')'); }
+        }
+        if (jqHas !== false) {
+            for (const it of items) {
+                const { data, error } = await sb.from('json_queue').insert({ filename: it.name, content: it.json }).select('id').single();
+                if (error) { if (jqMissing(error)) { jqHas = false; break; } } else it.qid = data.id;
+            }
+        }
+    } catch (e) { bad.push(e.message || String(e)); }
     jqBusy = false;
-    if (!items.length) { impPre = ''; return toast('Tidak ada file JSON yang valid'); }
-    await jqProcess(items, o, bad);
+    if (!items.length) { impPre = bad.length ? 'Gagal:\n' + bad.join('\n') : ''; return finishImport(bad.length ? 'Tidak ada file yang berhasil diproses.' : 'Tidak ada file yang valid'); }
+    await jqProcess(items, o, bad, warns);
 }
 
 async function jqRetry(id) {
@@ -6706,7 +6856,7 @@ async function jqLoad() {
 
 const jqSw = (id, t, s, on = true) => `<div class="srow"><span>${t}<small>${s}</small></span><button class="sw ${on ? 'on' : ''}" id="${id}" role="switch" aria-checked="${on}" onclick="this.classList.toggle('on');this.setAttribute('aria-checked',this.classList.contains('on'))"></button></div>`;
 
-const jqTab = () => `<div class="glass pad"><b>Upload JSON film</b><p class="hint">Pilih satu atau beberapa file .json. Nama, thumbnail, link film, resolusi, dan kategori diambil otomatis, lalu file JSON dihapus setelah filmnya masuk. Tab Tambah dan Episode manual tetap ada.</p><input id="jq_f" type="file" accept=".json,application/json" multiple onchange="jqPick(this)"><div id="jq_sel"></div>
+const jqTab = () => `<div class="glass pad"><b>Upload JSON film</b><p class="hint">Pilih satu atau beberapa file .json atau segmen .m4s (video + audio, otomatis dikenali dan disatukan). Nama, thumbnail, link film, resolusi, dan kategori diambil otomatis, lalu file JSON dihapus setelah filmnya masuk. Tab Tambah dan Episode manual tetap ada.</p><input id="jq_f" type="file" accept=".json,.m4s,application/json,video/iso.segment" multiple onchange="jqPick(this)"><input id="jq_mt" placeholder="Judul film (khusus upload file .m4s, opsional)"><div id="jq_sel"></div>
 ${jqSw('jq_lad', 'Resolusi otomatis', '144p, 240p, 540p, 720p sampai resolusi tertinggi di JSON')}
 ${jqSw('jq_tm', 'Lengkapi dari TMDB', 'Sinopsis, genre, dan tahun diisi otomatis. Thumbnail dari JSON tidak diganti')}
 <button class="btn glow" style="width:100%" onclick="jqRun()">Upload dan proses</button></div>
@@ -6893,7 +7043,7 @@ async function reload(m) {
 }
 
 sb.auth.onAuthStateChange(e => {
-    if (e === 'SIGNED_IN' && !me)
+    if (e === 'SIGNED_IN' && !me && !window.__nmReg)
         boot();
 });
 
@@ -8335,6 +8485,60 @@ html[data-fx=high] .poster.frm .frmi::before{animation:frmKB 9s ease-in-out infi
 html[data-fx=high] .poster.frm:hover .frmi{transform:translate(calc(var(--tx)*-14px),calc(var(--ty)*-9px)) scale(1.12)}
 html[data-fx=high] .poster.frm:not(.vis) .frmi::before,html[data-fx=high] .poster.frm:not(.vis) .frmi::after,html[data-fx=high] .poster.frm:not(.vis)::before{animation-play-state:paused}
 @media(prefers-reduced-motion:reduce){html[data-fx=high] .poster.frm.vis,html[data-fx=high] .poster.frm.vis:hover{animation:none}}
+/* ===== update masif: mini player, avatar kaca, rekomendasi, admin, sosial, responsif ===== */
+.film.mini{inset:auto 10px calc(var(--tabh,72px) + 12px + env(safe-area-inset-bottom,0px)) auto;width:min(340px,72vw);height:auto;overflow:hidden;z-index:60;border-radius:14px;box-shadow:0 10px 40px #0009;animation:none}
+.film.mini>*{display:none!important}.film.mini>#fplayer{display:block!important}.film.mini #fplayer .fpb{display:none!important}
+.film.mini>.fminib{display:flex!important;position:absolute;top:6px;right:6px;gap:6px;z-index:5}
+.fminib button{width:30px;height:30px;border-radius:50%;border:0;background:#000a;color:#fff;font-size:15px;cursor:pointer}
+.av{--h:200;background:linear-gradient(135deg,hsla(var(--h),95%,72%,.6),hsla(calc(var(--h) + 50),90%,62%,.35));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.55);box-shadow:0 4px 14px hsla(var(--h),80%,50%,.25),inset 0 1px 0 rgba(255,255,255,.6);position:relative;overflow:hidden;border-radius:50%}
+.av::after{content:"";position:absolute;left:14%;right:14%;bottom:20%;height:14%;background:radial-gradient(circle at 12% 50%,#ff8fb1aa 0 38%,#0000 40%),radial-gradient(circle at 88% 50%,#ff8fb1aa 0 38%,#0000 40%);pointer-events:none}
+.reco{margin:0 0 18px}.reco h2{margin:6px 0 10px}.reco .row{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}
+.rcard{flex:0 0 clamp(110px,18vw,170px);scroll-snap-align:start;cursor:pointer}.rcard .poster{width:100%;aspect-ratio:2/3}.rcard b{display:block;font-size:.85rem;margin-top:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.rcard small{opacity:.7}
+.seg.adm{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:0;z-index:5;padding:6px}.seg.adm button{flex:1 1 auto}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+#v>.glass.pad{margin-bottom:14px}
+.urow{display:grid;grid-template-columns:44px 1fr;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #8883}.urow .ed{grid-column:1/-1;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.ns .stt{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}.ns .stt div{flex:1 1 80px;text-align:center;padding:8px;border-radius:12px;background:#8882}.ns .stt b{display:block;font-size:1.2rem}
+.ns .hs{display:flex;gap:8px;overflow-x:auto}.ns .hs .poster{width:70px;aspect-ratio:2/3;flex:none}
+.nsm{position:fixed;inset:0;z-index:950;background:#000a;display:grid;place-items:center;padding:10px}.nsm>div{width:min(560px,100%);max-height:92vh;display:flex;flex-direction:column;background:var(--bg);border-radius:16px;overflow:hidden}
+.nsm .hd{display:flex;align-items:center;gap:10px;padding:10px 14px;border-bottom:1px solid #8883}.nsm .hd b{flex:1}
+.nsm .ms{flex:1;min-height:200px;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.nsm .m{max-width:78%;padding:8px 12px;border-radius:14px;background:#8883;align-self:flex-start;word-break:break-word}.nsm .m.me{align-self:flex-end;background:var(--ac);color:#fff}.nsm .m.big{font-size:2.2rem;background:none}
+.nsm .ft{display:flex;gap:6px;padding:8px;border-top:1px solid #8883}.nsm .ft input{flex:1;min-width:0}
+.nsm .pk{display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px;max-height:110px;overflow-y:auto}.nsm .pk button{font-size:1.4rem;background:none;border:0;cursor:pointer}
+.nsm .ic{display:flex;gap:8px;align-items:center;padding:8px;border-radius:12px;background:#8882}
+@media(min-width:1400px){main#v{max-width:1560px;margin-inline:auto}}
+@media(max-width:600px){.fgrid{grid-template-columns:1fr}.film.mini{width:60vw}}
+@media(min-width:601px) and (max-width:1024px){.rcard{flex-basis:clamp(120px,22vw,170px)}}
+/* ===== floating pill + running text sinkron, estetika ===== */
+#fpill{position:fixed;left:50%;top:calc(var(--hh,64px) + 10px);transform:translate(-50%,-8px);z-index:40;display:flex;align-items:center;gap:8px;max-width:min(560px,calc(100vw - 24px));padding:6px 8px 6px 12px;border-radius:var(--pill,999px);border:1px solid var(--bd,rgba(255,255,255,.18));background:rgba(var(--glow,255,255,255),.1);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);box-shadow:0 8px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.25);color:var(--ac2);font:700 .85rem/1 var(--font);opacity:0;pointer-events:none;transition:opacity .35s,transform .35s cubic-bezier(.3,1.4,.4,1)}
+#fpill.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
+#fpill .fp-d{flex:none;width:8px;height:8px;border-radius:50%;background:var(--pk);box-shadow:0 0 0 0 rgba(var(--glow),.6);animation:fppulse 2s infinite}
+#fpill .fp-t{flex:1;min-width:0;overflow:hidden;white-space:nowrap;cursor:pointer;mask-image:linear-gradient(90deg,#000 88%,transparent);-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent)}
+#fpill .fp-i{display:inline-block;background:linear-gradient(90deg,var(--ac2) 0 35%,#fff 50%,var(--ac2) 65% 100%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:fpsh 3.4s linear infinite;transition:opacity .25s}
+#fpill .fp-i.mq{will-change:transform}
+#fpill .fp-u{display:inline-block}
+#fpill .fp-x{flex:none;width:24px;height:24px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:inherit;cursor:pointer;font-size:12px;line-height:1}
+@keyframes fpsh{from{background-position:100% 0}to{background-position:-100% 0}}
+@keyframes fpmq{from{translate:0}to{translate:calc(-1 * var(--o,0px))}}
+@keyframes fppulse{70%{box-shadow:0 0 0 8px rgba(var(--glow),0)}100%{box-shadow:0 0 0 0 rgba(var(--glow),0)}}
+html.vid-open #fpill,html[data-fx=low] #fpill .fp-d{display:none}
+html[data-fx=low] #fpill .fp-i,html[data-fx=low] #fpill .fp-i.mq{animation:none!important;background:none!important;color:var(--ac2);-webkit-text-fill-color:currentColor}
+html.fp-on .ntb{display:none}
+html.fp-on main#v{padding-top:calc(var(--ph,34px) + 22px)}
+@media(prefers-reduced-motion:reduce){#fpill .fp-i,#fpill .fp-d{animation:none}}
+@media(max-width:480px){#fpill{font-size:.78rem;padding:5px 6px 5px 10px}}
+/* estetika umum */
+:focus-visible{outline:2px solid var(--ac2);outline-offset:2px}
+::selection{background:rgba(var(--glow),.35)}
+html{scroll-behavior:smooth;scrollbar-width:thin}
+main#v h2{font-size:clamp(1.15rem,2.2vw,1.55rem);letter-spacing:-.01em;margin:clamp(18px,3vw,30px) 0 12px}
+.glass.pad{padding:clamp(14px,2vw,22px);border-radius:var(--r,18px)}
+.glass{backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2)}
+.btn{transition:transform .2s,box-shadow .2s,filter .2s}.btn:hover{transform:translateY(-2px);filter:brightness(1.08)}.btn:active{transform:scale(.97)}
+.item{transition:transform .25s,box-shadow .25s}
+.tabs{box-shadow:0 10px 30px rgba(0,0,0,.3);padding:6px}
+input,textarea,select{border-radius:var(--rs,12px);transition:border-color .2s,box-shadow .2s}input:focus,textarea:focus,select:focus{box-shadow:0 0 0 3px rgba(var(--glow),.25)}
 </style>
 <script id="nm-frm-js">
 /* ambil warna dominan dari gambar di dalam poster, aktif hanya saat poster terlihat di layar (High) */
@@ -8383,6 +8587,415 @@ html[data-fx=high] .poster.frm:not(.vis) .frmi::before,html[data-fx=high] .poste
     new MutationObserver(later).observe(document.body || root, { childList: true, subtree: true });
     new MutationObserver(later).observe(root, { attributes: true, attributeFilter: ['data-fx'] });
     scan();
+})();
+</script>
+<script>
+// ===== update masif: minimize player, rekomendasi, admin pengguna, ID 5 digit, profil publik, follow, pesan, undangan nobar =====
+(function () {
+    const H = document.documentElement, rpc = (n, a) => sb.rpc(n, a || {});
+    const need = e => { if (e && /function|schema cache|does not exist|column/i.test(e.message || '')) toast('Jalankan migrasi_sosial.sql di Supabase SQL Editor dulu'); else if (e) toast(e.message); return !!e; };
+    // --- 1. mini player ---
+    window.filmMini = on => {
+        const f = $('#film'); if (!f) return;
+        f.classList.toggle('mini', on); H.classList.toggle('vid-open', !on);
+        if (on && !f.querySelector('.fminib')) { f.insertAdjacentHTML('beforeend', '<div class="fminib"><button aria-label="Perbesar" onclick="filmMini(false)">⤢</button><button aria-label="Tutup" onclick="filmClose&&filmClose()">✕</button></div>'); }
+    };
+    const g0 = window.go;
+    window.go = function (t) { const f = $('#film'), p = $('#fplayer'); if (f && p && !p.hidden && !f.classList.contains('mini') && !f.dataset.rm) filmMini(true); return g0.apply(this, arguments); };
+    const ot = window.openTitle;
+    window.openTitle = function () { const f = $('#film'); if (f && f.classList.contains('mini') && window.filmClose) filmClose(); return ot.apply(this, arguments); };
+    new MutationObserver(ms => ms.forEach(m => m.addedNodes.forEach(n => {
+        if (n.id !== 'film') return;
+        setTimeout(() => {
+            const bar = n.querySelector('.fbar'), cl = n.querySelector('#cl'); if (!bar) return;
+            const inRoom = typeof room !== 'undefined' && room && room.code; if (inRoom) n.dataset.rm = '1';
+            const mk = (id, t, fn) => { const b = document.createElement('button'); b.id = id; b.className = 'fa'; b.textContent = t; b.title = t; b.onclick = fn; bar.insertBefore(b, cl); };
+            if (!inRoom) mk('fmin', '⤓ Mini', () => filmMini(true));
+            if (inRoom) mk('finv', '👥 Undang', () => nsInvite());
+        }, 350);
+    }))).observe(document.body, { childList: true });
+    // --- 2. rekomendasi di beranda ---
+    const h0 = views.home;
+    views.home = function () {
+        h0.apply(this, arguments);
+        if (!titles.length || !$('#v')) return;
+        const by = {}; titles.forEach(t => (by[(t.category || 'film')] = by[t.category || 'film'] || []).push(t));
+        const pick = []; const pools = Object.values(by).map(a => [...a].sort(() => Math.random() - .5));
+        for (let i = 0; pick.length < 12 && pools.some(p => p[i]); i++) pools.forEach(p => p[i] && pick.length < 12 && pick.push(p[i]));
+        $('#v').insertAdjacentHTML('afterbegin', `<section class="reco"><h2>${ic('sparkle')} Rekomendasi</h2><div class="row">${pick.map(t => `<div class="rcard" onclick="openTitle('${t.id}')">${poster(t)}<b>${esc(t.title)}</b><small>${esc(catLabel(t) || (t.type === 'series' ? 'Series' : 'Film'))}</small></div>`).join('')}</div></section>`);
+    };
+    // --- 3. admin: ubah nama & password user ---
+    window.admUsr = () => { setTimeout(admUsrLoad, 0); return '<div class="glass pad" id="usr_box"><p class="hint">Memuat pengguna…</p></div>'; };
+    window.admUsrLoad = async (q = '') => {
+        const { data, error } = await rpc('admin_users'); if (need(error)) return;
+        const b = $('#usr_box'); if (!b) return;
+        const L = (data || []).filter(u => !q || (u.username + u.uid5).toLowerCase().includes(q.toLowerCase()));
+        b.innerHTML = `<b>Pengguna (${data.length})</b><div class="sbox">${ic('search')}<input placeholder="Cari nama / ID" value="${esc(q)}" oninput="admUsrLoad(this.value)"></div>${L.map(u => `<div class="urow">${av(u.avatar, 44)}<div><b>${esc(u.username)}</b> <small>ID ${u.uid5 || '-'} · ${u.role}</small></div><div class="ed"><input id="un_${u.id}" placeholder="Nama baru"><input id="up_${u.id}" type="text" placeholder="Password baru (min. 6)"><button class="btn sm" onclick="admSave('${u.id}')">Simpan</button></div></div>`).join('')}`;
+    };
+    window.admSave = async id => {
+        const n = $('#un_' + id).value.trim(), p = $('#up_' + id).value;
+        if (!n && !p) return toast('Isi nama atau password baru');
+        if (p && p.length < 6) return toast('Password minimal 6 karakter');
+        if (!confirm('Simpan perubahan akun ini?')) return;
+        const { error } = await rpc('admin_set_user', { p_id: id, p_name: n, p_pass: p }); if (need(error)) return;
+        toast('Akun diperbarui'); admUsrLoad();
+    };
+    // --- 4. sosial: ID, profil publik, follow, pesan, undangan nobar ---
+    const EMO = '😀😁😂🤣😊😍😘😎🤔😢😭😡🥳😴🤯👍👏🙏🔥❤️💔🎬🍿'.match(/\p{Extended_Pictographic}\uFE0F?/gu);
+    const brief = async ids => { ids = [...new Set(ids)]; if (!ids.length) return {}; const { data } = await rpc('user_brief', { p_ids: ids }); return Object.fromEntries((data || []).map(u => [u.id, u])); };
+    const card = u => `<div class="glass pad ns"><div style="display:flex;gap:12px;align-items:center">${av(u.avatar, 64)}<div><h3 style="margin:0">${esc(u.username)}</h3><small>ID ${u.uid5}</small></div></div><p>${esc(u.bio || 'Belum ada bio.')}</p><div class="stt"><div><b>${u.followers}</b>Pengikut</div><div><b>${u.following}</b>Diikuti</div><div><b>${u.friends}</b>Teman</div></div><b>Riwayat tontonan</b><div class="hs">${(u.history || []).map(h => `<div class="poster" title="${esc(h.title)}" style="background-image:url('${esc(sm(h.thumbnail_url))}')"></div>`).join('') || '<small>Belum ada.</small>'}</div>${u.id === me.id ? '' : `<div class="prow" style="margin-top:10px"><button class="btn sm ${u.is_following ? 'ghost' : ''}" onclick="nsFollow('${u.id}',${!u.is_following},'${u.uid5}')">${u.is_following ? 'Berhenti ikuti' : 'Ikuti'}</button><button class="btn sm glow" onclick="nsChat('${u.id}')">Pesan</button></div>`}</div>`;
+    window.nsFollow = async (id, on, uid) => {
+        const r = on ? await sb.from('follows').insert({ followee: id }) : await sb.from('follows').delete().eq('follower', me.id).eq('followee', id);
+        if (need(r.error)) return; nsFind(uid);
+    };
+    window.nsFind = async uid => {
+        uid = String(uid || $('#ns_q').value).trim(); if (!/^\d{5}$/.test(uid)) return toast('ID terdiri dari 5 angka');
+        const { data, error } = await rpc('find_user', { p_uid: uid }); if (need(error)) return;
+        $('#ns_res').innerHTML = data ? card(data) : '<p class="hint">ID tidak ditemukan.</p>';
+    };
+    window.nsBio = async () => { const { error } = await sb.from('profiles').update({ bio: $('#ns_bio').value.slice(0, 200) }).eq('id', me.id); if (!need(error)) toast('Bio disimpan'); };
+    const m0 = views.more;
+    views.more = async function () {
+        await m0.apply(this, arguments);
+        if (!$('#v')) return;
+        $('#v').insertAdjacentHTML('afterbegin', `<div class="glass pad ns" id="ns"><h3>${ic('sparkle')} Profil &amp; Teman</h3><p>ID kamu: <b>${esc(me.uid5 || '…')}</b> <small>(bagikan agar bisa dicari)</small></p><textarea id="ns_bio" maxlength="200" placeholder="Tulis bio…">${esc(me.bio || '')}</textarea><button class="btn sm" onclick="nsBio()">Simpan bio</button><div id="ns_me"></div><div class="sbox" style="margin-top:12px">${ic('search')}<input id="ns_q" inputmode="numeric" maxlength="5" placeholder="Cari ID 5 digit"><button class="btn sm" onclick="nsFind()">Cari</button></div><div id="ns_res"></div><button class="btn ghost" style="width:100%;margin-top:10px" onclick="nsInbox()">Kotak pesan</button></div>`);
+        if (me.uid5) { const { data } = await rpc('find_user', { p_uid: me.uid5 }); if (data && $('#ns_me')) $('#ns_me').innerHTML = card(data); }
+    };
+    // pesan
+    let dmCh = null;
+    const bub = m => {
+        const me_ = m.from_id === me.id;
+        if (m.kind === 'sticker') return `<div class="m big ${me_ ? 'me' : ''}">${esc(m.msg)}</div>`;
+        if (m.kind === 'voice') return `<div class="m ${me_ ? 'me' : ''}"><audio controls preload="none" src="${esc(m.media_url)}"></audio></div>`;
+        if (m.kind === 'invite') return `<div class="m ${me_ ? 'me' : ''}"><div class="ic">🎬 <span>${esc(m.msg)}</span></div>${me_ ? '' : `<button class="btn sm glow" style="margin-top:6px" onclick="nsJoin('${esc((m.meta || {}).code)}')">Masuk nobar</button>`}</div>`;
+        return `<div class="m ${me_ ? 'me' : ''}">${esc(m.msg)}</div>`;
+    };
+    window.nsJoin = code => { document.querySelector('.nsm')?.remove(); joinRoom(code); };
+    window.nsSend = async (to, p) => { const { error } = await sb.from('dms').insert({ to_id: to, ...p }); need(error); };
+    window.nsChat = async id => {
+        document.querySelector('.nsm')?.remove();
+        const u = (await brief([id]))[id] || { username: 'Pengguna' };
+        const el = document.createElement('div'); el.className = 'nsm';
+        el.innerHTML = `<div><div class="hd">${av(u.avatar, 36)}<b>${esc(u.username)}</b><button class="btn sm ghost" onclick="this.closest('.nsm').remove()">Tutup</button></div><div class="ms" id="dm_ms"></div><div class="pk" id="dm_pk" hidden></div><div class="ft"><button class="ib" id="dm_e">😊</button><button class="ib" id="dm_s">${ic('sticker')}</button><input id="dm_t" placeholder="Tulis pesan…" maxlength="1000"><button class="ib" id="dm_v">🎤</button><button class="btn sm glow" id="dm_g">Kirim</button></div></div>`;
+        document.body.appendChild(el);
+        const ms = $('#dm_ms'), add = m => { ms.insertAdjacentHTML('beforeend', bub(m)); ms.scrollTop = ms.scrollHeight; };
+        const { data } = await sb.from('dms').select('*').or(`and(from_id.eq.${me.id},to_id.eq.${id}),and(from_id.eq.${id},to_id.eq.${me.id})`).order('id').limit(200);
+        (data || []).forEach(add);
+        if (dmCh) sb.removeChannel(dmCh);
+        dmCh = sb.channel('dm_' + me.id + '_' + id).on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'dms' }, p => { const m = p.new; if ((m.from_id === id && m.to_id === me.id) || (m.from_id === me.id && m.to_id === id)) add(m); }).subscribe();
+        const send = () => { const v = $('#dm_t').value.trim(); if (!v) return; $('#dm_t').value = ''; nsSend(id, { kind: 'text', msg: v }); };
+        $('#dm_g').onclick = send; $('#dm_t').onkeydown = e => e.key === 'Enter' && send();
+        const pk = (list, kind) => { const b = $('#dm_pk'); b.hidden = false; b.innerHTML = list.map(x => `<button>${x}</button>`).join(''); b.onclick = e => { if (e.target.tagName !== 'BUTTON') return; if (kind === 'sticker') { nsSend(id, { kind, msg: e.target.textContent }); b.hidden = true; } else $('#dm_t').value += e.target.textContent; }; };
+        $('#dm_e').onclick = () => pk(EMO, 'emoji'); $('#dm_s').onclick = () => pk(typeof STICKERS !== 'undefined' ? STICKERS : EMO, 'sticker');
+        let rec = null, chunks = [];
+        $('#dm_v').onclick = async function () {
+            if (rec) { rec.stop(); return; }
+            try {
+                const st = await navigator.mediaDevices.getUserMedia({ audio: true }); chunks = [];
+                const type = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : 'audio/mp4';
+                rec = new MediaRecorder(st, { mimeType: type }); this.textContent = '⏹';
+                rec.ondataavailable = e => e.data.size && chunks.push(e.data);
+                rec.onstop = async () => {
+                    st.getTracks().forEach(t => t.stop()); this.textContent = '🎤'; rec = null;
+                    if (!chunks.length) return;
+                    const path = `dm/${me.id}/${Date.now()}.${type === 'audio/webm' ? 'webm' : 'm4a'}`;
+                    const r = await sb.storage.from('voice').upload(path, new Blob(chunks, { type }), { contentType: type }); if (need(r.error)) return;
+                    nsSend(id, { kind: 'voice', media_url: sb.storage.from('voice').getPublicUrl(path).data.publicUrl });
+                };
+                rec.start();
+            } catch (e) { toast('Izin mikrofon ditolak'); }
+        };
+    };
+    window.nsInbox = async () => {
+        const { data, error } = await sb.from('dms').select('from_id,to_id,kind,msg,id').or(`from_id.eq.${me.id},to_id.eq.${me.id}`).order('id', { ascending: false }).limit(300); if (need(error)) return;
+        const last = {}; (data || []).forEach(m => { const o = m.from_id === me.id ? m.to_id : m.from_id; if (!last[o]) last[o] = m; });
+        const u = await brief(Object.keys(last));
+        document.querySelector('.nsm')?.remove();
+        const el = document.createElement('div'); el.className = 'nsm';
+        el.innerHTML = `<div><div class="hd"><b>Kotak pesan</b><button class="btn sm ghost" onclick="this.closest('.nsm').remove()">Tutup</button></div><div class="ms">${Object.entries(last).map(([o, m]) => `<div class="ic" style="cursor:pointer" onclick="nsChat('${o}')">${av((u[o] || {}).avatar, 40)}<span><b>${esc((u[o] || {}).username || 'Pengguna')}</b><br><small>${m.kind === 'text' ? esc(m.msg || '').slice(0, 40) : '[' + m.kind + ']'}</small></span></div>`).join('') || '<p class="hint">Belum ada pesan. Cari ID teman di menu Lainnya.</p>'}</div></div>`;
+        document.body.appendChild(el);
+    };
+    // undangan nobar (tombol di dalam room)
+    window.nsInvite = async () => {
+        if (!room || !room.code) return toast('Masuk room nobar dulu');
+        const { data: f, error } = await sb.from('follows').select('followee').eq('follower', me.id); if (need(error)) return;
+        const u = await brief((f || []).map(x => x.followee)), title = ($('#film .ft') || {}).textContent || 'film';
+        const el = document.createElement('div'); el.className = 'nsm';
+        el.innerHTML = `<div><div class="hd"><b>Undang teman nobar</b><button class="btn sm ghost" onclick="this.closest('.nsm').remove()">Tutup</button></div><div class="ms">${Object.values(u).map(x => `<div class="ic">${av(x.avatar, 40)}<b style="flex:1">${esc(x.username)}</b><button class="btn sm glow" onclick="nsDoInvite('${x.id}',this)">Undang</button></div>`).join('') || '<p class="hint">Ikuti teman dulu lewat pencarian ID di menu Lainnya.</p>'}</div></div>`;
+        document.body.appendChild(el); window._invTitle = title;
+    };
+    window.nsDoInvite = async (id, b) => {
+        await nsSend(id, { kind: 'invite', msg: `${me.username} mengajak nobar "${window._invTitle}" (kode ${room.code})`, meta: { code: room.code } });
+        b.textContent = 'Terkirim'; b.disabled = true;
+    };
+})();
+</script>
+<script>
+// ===== floating pill: sinkron dengan running text judul (warna, ritme 3.4s, posisi di bawah header) =====
+(function () {
+    let idx = 0, tm = null, closed = false;
+    const root = document.documentElement;
+    const el = document.createElement('div');
+    el.id = 'fpill'; el.setAttribute('role', 'status'); el.setAttribute('aria-live', 'polite');
+    el.innerHTML = '<i class="fp-d"></i><span class="fp-t"><span class="fp-i"></span></span><button class="fp-x" aria-label="Tutup">✕</button>';
+    document.body.appendChild(el);
+    const txt = el.querySelector('.fp-t'), inn = el.querySelector('.fp-i');
+    const items = () => {
+        const a = [];
+        try { if (typeof NT_CUR !== 'undefined' && NT_CUR) a.push({ t: '✨ ' + (NT_CUR.title || 'Update baru'), f: () => ntShow({ ...NT_CUR, auto_secs: 0 }) }); } catch (e) { }
+        try {
+            const nw = titles.filter(isNewTitle).slice(0, 3); if (nw.length) a.push({ t: '🆕 Baru: ' + nw.map(x => x.title).join(' · '), f: () => openTitle(nw[0].id) });
+            const tr = [...titles].sort((x, y) => (vcount[y.id] || 0) - (vcount[x.id] || 0))[0]; if (tr && (vcount[tr.id] || 0) > 0) a.push({ t: '🔥 Lagi tren: ' + tr.title, f: () => openTitle(tr.id) });
+            a.push({ t: '🍿 Halo ' + me.username + ', mau nonton apa hari ini?', f: () => go('discover') });
+        } catch (e) { }
+        return a;
+    };
+    const place = () => {
+        const top = document.querySelector('.top');
+        if (top) root.style.setProperty('--hh', Math.round(top.getBoundingClientRect().bottom) + 'px');
+        root.style.setProperty('--ph', el.offsetHeight + 'px');
+    };
+    let anim = null, cyc = 0;
+    const show = () => {
+        const L = items(), ok = L.length && !closed && typeof me !== 'undefined' && me && document.querySelector('.top');
+        el.classList.toggle('on', !!ok); root.classList.toggle('fp-on', !!ok);
+        if (!ok) return;
+        const it = L[idx++ % L.length];
+        inn.style.opacity = 0;
+        setTimeout(() => {
+            if (anim) { try { anim.cancel(); } catch (e) { } anim = null; }
+            cyc = 0;
+            inn.style.transform = 'none'; inn.classList.remove('mq');
+            inn.textContent = it.t; txt.onclick = it.f; place();
+            // ukur setelah layout selesai, lalu jalankan marquee mulus (loop tanpa putus)
+            requestAnimationFrame(() => {
+                const box = txt.clientWidth, w = inn.scrollWidth;
+                if (w > box + 4) {
+                    const gap = 40;
+                    inn.innerHTML = '<span class="fp-u"></span><span class="fp-g" style="display:inline-block;width:' + gap + 'px"></span><span class="fp-u"></span>';
+                    inn.querySelectorAll('.fp-u').forEach(n => n.textContent = it.t);
+                    const unit = inn.querySelector('.fp-u').getBoundingClientRect().width + gap;
+                    cyc = Math.max(5, unit / 45);
+                    inn.classList.add('mq');
+                    try { anim = inn.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(' + (-unit) + 'px)' }], { duration: cyc * 1000, iterations: Infinity, easing: 'linear' }); } catch (e) { }
+                }
+                inn.style.opacity = 1;
+            });
+        }, 250);
+    };
+    el.querySelector('.fp-x').onclick = () => { closed = true; show(); };
+    const loop = () => { show(); clearTimeout(tm); tm = setTimeout(loop, inn.classList.contains('mq') ? Math.max(11000, cyc * 2000 + 1500) : 7000); };
+    setTimeout(loop, 1500);
+    addEventListener('resize', place);
+    if (window.ResizeObserver) new ResizeObserver(place).observe(document.body);
+})();
+</script>
+
+<style id="nm-fx-levels">
+/* ================= LEVEL VISUAL: LOW / MEDIUM / HIGH / ULTRA ================= */
+/* LOW: flat, tanpa blur, tanpa shadow, tanpa animasi berat */
+html[data-fx=low] *,html[data-fx=low] *::before,html[data-fx=low] *::after{box-shadow:none!important;text-shadow:none!important;filter:none!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+html[data-fx=low] *:not([class*=spin]):not([class*=skel]):not([class*=load]),html[data-fx=low] *:not([class*=spin]):not([class*=skel]):not([class*=load])::before,html[data-fx=low] *:not([class*=spin]):not([class*=skel]):not([class*=load])::after{animation:none!important}
+html[data-fx=low] .glass,html[data-fx=low] .toast,html[data-fx=low] .sheet,html[data-fx=low] .nc{background:var(--bg2,#1b1030)!important;border:1px solid rgba(255,255,255,.14)!important}
+html[data-fx=low] .bg,html[data-fx=low] .beam,html[data-fx=low] .grain,html[data-fx=low] #spot,html[data-fx=low] #nmsp{display:none!important}
+/* MEDIUM: animasi dasar, blur ringan, shadow standar */
+html[data-fx=medium] .glass:not(.top):not(.tabs),html[data-fx=medium] .toast{backdrop-filter:blur(8px) saturate(120%)!important;-webkit-backdrop-filter:blur(8px) saturate(120%)!important}
+html[data-fx=medium] .glass{box-shadow:0 5px 16px rgba(0,0,0,.32)!important}
+html[data-fx=medium] .poster{box-shadow:0 4px 12px rgba(0,0,0,.3)}
+html[data-fx=medium] #nmsp{display:none!important}
+/* HIGH: glassmorphism penuh, transisi halus, glow lembut pada elemen aktif */
+html[data-fx=high] .glass:not(.top):not(.tabs),html[data-fx=high] .toast{backdrop-filter:blur(24px) saturate(170%)!important;-webkit-backdrop-filter:blur(24px) saturate(170%)!important;border:1px solid rgba(255,255,255,.2)!important}
+html[data-fx=high] .glass{box-shadow:0 14px 36px rgba(0,0,0,.42),inset 0 1px 0 rgba(255,255,255,.3)!important}
+html[data-fx=high] .tab.on,html[data-fx=high] .chip.on,html[data-fx=high] .seg button.on{box-shadow:0 0 16px rgba(var(--glow),.5)}
+html[data-fx=high] .btn:hover,html[data-fx=high] .poster:hover{box-shadow:0 0 22px rgba(var(--glow),.4),0 12px 28px rgba(0,0,0,.4)}
+html[data-fx=high] *{transition-timing-function:cubic-bezier(.2,.9,.3,1)}
+/* ULTRA: blur tinggi, kilau/partikel, multi-layer shadow, glow intens, animasi kompleks */
+html[data-fx=high][data-ultra] .glass:not(.top):not(.tabs),html[data-fx=high][data-ultra] .toast,html[data-fx=high][data-ultra] .top.glass,html[data-fx=high][data-ultra] .tabs.glass{backdrop-filter:blur(44px) saturate(230%) brightness(1.1)!important;-webkit-backdrop-filter:blur(44px) saturate(230%) brightness(1.1)!important;border:1px solid rgba(255,255,255,.34)!important}
+html[data-fx=high][data-ultra] .glass{box-shadow:0 2px 4px rgba(0,0,0,.25),0 8px 16px rgba(0,0,0,.28),0 22px 50px rgba(0,0,0,.4),0 0 38px rgba(var(--glow),.38),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(255,255,255,.1)!important;animation:nmUPulse 4.2s ease-in-out infinite}
+html[data-fx=high][data-ultra] .tab.on,html[data-fx=high][data-ultra] .chip.on,html[data-fx=high][data-ultra] .seg button.on{box-shadow:0 0 20px rgba(var(--glow),.85),0 0 48px rgba(var(--glow),.5),inset 0 1px 0 rgba(255,255,255,.5)}
+html[data-fx=high][data-ultra] .btn.glow{box-shadow:0 0 22px rgba(var(--glow),.8),0 0 56px rgba(var(--glow),.45),0 8px 20px rgba(0,0,0,.4);animation:nmUBtn 2.4s ease-in-out infinite alternate}
+html[data-fx=high][data-ultra] .poster:hover{box-shadow:0 0 34px rgba(var(--glow),.6),0 30px 60px rgba(0,0,0,.55)}
+@keyframes nmUPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.07)}}
+@keyframes nmUBtn{from{filter:brightness(1)}to{filter:brightness(1.18)}}
+#nmsp{position:fixed;inset:0;z-index:3;pointer-events:none;overflow:hidden}
+#nmsp i{position:absolute;width:var(--s,10px);height:var(--s,10px);background:#fff;clip-path:polygon(50% 0,62% 38%,100% 50%,62% 62%,50% 100%,38% 62%,0 50%,38% 38%);opacity:0;animation:nmTw var(--d,4s) ease-in-out var(--l,0s) infinite;filter:drop-shadow(0 0 6px rgba(var(--glow),.95))}
+@keyframes nmTw{0%,100%{opacity:0;transform:scale(.2) rotate(0)}50%{opacity:.9;transform:scale(1) rotate(90deg)}}
+@media(prefers-reduced-motion:reduce){#nmsp{display:none}}
+
+/* ================= GLOBAL ANNOUNCEMENT ================= */
+#annw{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 12px);transform:translateX(-50%);z-index:10050;display:flex;flex-direction:column;gap:10px;width:min(470px,calc(100vw - 24px));pointer-events:none}
+.ann{pointer-events:auto;position:relative;display:flex;gap:12px;align-items:flex-start;padding:14px 38px 17px 14px;border-radius:var(--r,20px);color:var(--tx,#fff);font-family:var(--body,system-ui);overflow:hidden;border:1px solid rgba(255,255,255,.22);background:color-mix(in srgb,var(--bg2,#1b1030) 80%,transparent);animation:annIn .45s cubic-bezier(.2,.9,.3,1.2) both}
+.ann.out{animation:annOut .32s ease-in forwards}
+.ann .ai{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-size:21px;background:rgba(var(--glow,255,95,174),.28);border:1px solid rgba(255,255,255,.25)}
+.ann .at{display:block;font:800 .98rem var(--font,system-ui);color:var(--ac2,#fff);margin:0 0 3px}
+.ann .am{margin:0;font-size:.9rem;line-height:1.45;word-break:break-word;white-space:pre-wrap}
+.ann .aw{display:block;margin-top:6px;font-size:.7rem;opacity:.65}
+.ann .ax{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;border:0;background:rgba(255,255,255,.14);color:inherit;cursor:pointer;font-size:12px;line-height:1}
+.ann .ab{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--ac,#ff5fae);transform-origin:left;animation:annBar var(--ad,12s) linear forwards}
+@keyframes annIn{from{opacity:0;transform:translateY(-26px) scale(.94)}to{opacity:1;transform:none}}
+@keyframes annOut{to{opacity:0;transform:translateY(-18px) scale(.95)}}
+@keyframes annBar{to{transform:scaleX(0)}}
+/* per level */
+html[data-fx=low] .ann{background:var(--bg2,#1b1030);border:2px solid var(--ac,#ff5fae);animation:none!important;box-shadow:none}
+html[data-fx=low] .ann .ab{animation:none!important;display:none}
+html[data-fx=medium] .ann{backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);box-shadow:0 6px 18px rgba(0,0,0,.36)}
+html[data-fx=high] .ann{backdrop-filter:blur(24px) saturate(170%);-webkit-backdrop-filter:blur(24px) saturate(170%);box-shadow:0 14px 40px rgba(0,0,0,.45),0 0 26px rgba(var(--glow),.42),inset 0 1px 0 rgba(255,255,255,.3)}
+html[data-fx=high][data-ultra] .ann{backdrop-filter:blur(44px) saturate(230%);-webkit-backdrop-filter:blur(44px) saturate(230%);border-color:rgba(255,255,255,.4);box-shadow:0 2px 4px rgba(0,0,0,.25),0 10px 20px rgba(0,0,0,.3),0 26px 60px rgba(0,0,0,.45),0 0 44px rgba(var(--glow),.7),0 0 90px rgba(var(--glow),.35),inset 0 1px 0 rgba(255,255,255,.5)}
+html[data-fx=high][data-ultra] .ann::before{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);animation:annSweep 2.8s ease-in-out infinite;pointer-events:none}
+html[data-fx=high][data-ultra] .ann .ai{box-shadow:0 0 20px rgba(var(--glow),.9);animation:annRing 1.6s ease-in-out infinite}
+@keyframes annSweep{0%{left:-60%}60%,100%{left:130%}}
+@keyframes annRing{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.annhist{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid rgba(255,255,255,.1)}
+.annhist>div{flex:1;min-width:0}.annhist b{display:block}.annhist small{opacity:.65}
+.annhist p{margin:2px 0 0;font-size:.85rem;word-break:break-word}
+</style>
+
+<script>
+/* ===== Global Announcement: Supabase Realtime + Web Audio ===== */
+const ANN_SQL = `create table if not exists public.announcements (
+  id bigint generated always as identity primary key,
+  title text not null default 'Pengumuman',
+  message text not null,
+  duration int not null default 12,
+  created_by uuid default auth.uid(),
+  created_at timestamptz not null default now()
+);
+alter table public.announcements enable row level security;
+create policy "ann_read" on public.announcements for select using (true);
+create policy "ann_admin_write" on public.announcements for all
+  using (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'))
+  with check (exists (select 1 from public.profiles p where p.id = auth.uid() and p.role = 'admin'));
+alter publication supabase_realtime add table public.announcements;`;
+let annCh = null, annReady = false, annSeen = new Set();
+
+const annSnd = {
+    ctx: null, pending: false,
+    ensure() { if (!this.ctx) { const A = window.AudioContext || window.webkitAudioContext; if (!A) return false; try { this.ctx = new A(); } catch (e) { return false; } } return true; },
+    unlock() { if (!this.ensure()) return; if (this.ctx.state === 'suspended') this.ctx.resume().then(() => { if (this.pending) { this.pending = false; this.chime(); } }).catch(() => { }); },
+    play() {
+        if (!this.ensure()) return;
+        const c = this.ctx;
+        if (c.state === 'running') return this.chime();
+        this.pending = true; // diputar begitu browser mengizinkan (interaksi pertama)
+        c.resume().then(() => { if (c.state === 'running' && this.pending) { this.pending = false; this.chime(); } }).catch(() => { });
+    },
+    chime() {
+        try {
+            const c = this.ctx, t0 = c.currentTime, m = c.createGain();
+            m.gain.value = .5; m.connect(c.destination);
+            [[659.25, 0], [830.61, .13], [987.77, .26], [1318.5, .42]].forEach(([f, d], i) => {
+                [['sine', 1], ['triangle', .35]].forEach(([ty, k]) => {
+                    const o = c.createOscillator(), g = c.createGain(), t = t0 + d, len = i === 3 ? .7 : .38;
+                    o.type = ty; o.frequency.setValueAtTime(f, t);
+                    g.gain.setValueAtTime(.0001, t);
+                    g.gain.exponentialRampToValueAtTime(.22 * k, t + .02);
+                    g.gain.exponentialRampToValueAtTime(.0001, t + len);
+                    o.connect(g); g.connect(m); o.start(t); o.stop(t + len + .03);
+                });
+            });
+        } catch (e) { }
+    }
+};
+['pointerdown', 'keydown', 'touchstart'].forEach(ev => addEventListener(ev, () => annSnd.unlock(), { passive: true }));
+
+function annShow(a) {
+    if (!a) return;
+    const key = String(a.id);
+    if (annSeen.has(key)) return;
+    annSeen.add(key);
+    let w = document.getElementById('annw');
+    if (!w) { w = document.createElement('div'); w.id = 'annw'; w.setAttribute('role', 'alert'); w.setAttribute('aria-live', 'assertive'); document.body.appendChild(w); }
+    const dur = Math.min(120, Math.max(4, +a.duration || 12));
+    const el = document.createElement('div');
+    el.className = 'ann';
+    el.style.setProperty('--ad', dur + 's');
+    const tm = new Date(a.created_at || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    el.innerHTML = `<div class="ai">📢</div><div style="min-width:0"><b class="at">${esc(a.title || 'Pengumuman')}</b><p class="am">${esc(a.message || '')}</p><small class="aw">Pengumuman · ${esc(tm)}</small></div><button class="ax" aria-label="Tutup">✕</button><i class="ab"></i>`;
+    const close = () => { if (el._c) return; el._c = 1; el.classList.add('out'); setTimeout(() => el.remove(), 340); };
+    el.querySelector('.ax').onclick = close;
+    w.prepend(el);
+    while (w.children.length > 3) w.lastElementChild.remove();
+    setTimeout(close, dur * 1000);
+    annSnd.play();
+    try { navigator.vibrate && navigator.vibrate([120, 60, 120]); } catch (e) { }
+}
+
+function annInit() {
+    if (annReady || typeof me === 'undefined' || !me) return;
+    annReady = true;
+    try {
+        annCh = sb.channel('nm-announce', { config: { broadcast: { self: true } } })
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'announcements' }, p => annShow(p.new))
+            .on('broadcast', { event: 'announce' }, p => annShow(p.payload))
+            .subscribe();
+    } catch (e) { annReady = false; }
+}
+setInterval(() => { if (typeof me !== 'undefined' && me) annInit(); }, 1500);
+
+/* ---- panel admin ---- */
+function annForm() {
+    return `<div class="glass pad"><p class="hint">Pengumuman langsung muncul di layar semua pengguna yang sedang aktif (tanpa refresh) beserta bunyi notifikasi.</p>
+<div class="fgrid"><label class="fld"><span>Judul</span><input id="an_t" maxlength="60" placeholder="Pengumuman"></label>
+<label class="fld"><span>Tampil selama (detik)</span><input id="an_d" type="number" min="4" max="120" value="12"></label></div>
+<label class="fld"><span>Isi pengumuman</span><textarea id="an_m" maxlength="500" rows="4" placeholder="Contoh: Film baru sudah tayang! Nobar malam ini jam 8 ya 🍿"></textarea></label>
+<div class="pf"><button class="btn glow" id="an_go" onclick="annSend()">${ic('sparkle')} Kirim ke semua</button><button class="btn ghost" onclick="annPreview()">Pratinjau</button></div><p class="hint" id="an_msg"></p>
+<div class="msql" id="an_sql" hidden><p class="hint">Tabel <b>announcements</b> belum ada. Jalankan SQL ini sekali di Supabase SQL Editor (pengumuman tetap terkirim realtime lewat broadcast).</p><pre>${esc(ANN_SQL)}</pre><button class="btn sm ghost" style="margin-top:8px" onclick="navigator.clipboard.writeText(ANN_SQL).then(()=>toast('SQL disalin'))">${ic('copy')} Salin SQL</button></div>
+<p class="hint" style="margin-top:14px">Riwayat terakhir</p><div id="an_list"></div></div>`;
+}
+function annPreview() {
+    annSnd.unlock();
+    annShow({ id: 'pv' + Date.now(), title: ($('#an_t').value || 'Pengumuman').trim(), message: ($('#an_m').value || 'Ini pratinjau pengumuman.').trim(), duration: +$('#an_d').value || 12 });
+}
+async function annLoad() {
+    const box = $('#an_list'); if (!box) return;
+    const { data, error } = await sb.from('announcements').select('*').order('created_at', { ascending: false }).limit(10);
+    if (!$('#an_list')) return;
+    if (error) { $('#an_sql').hidden = false; box.innerHTML = '<p class="hint">Belum ada data.</p>'; return; }
+    box.innerHTML = (data || []).map(a => `<div class="annhist"><div><b>${esc(a.title)}</b><p>${esc(a.message)}</p><small>${esc(new Date(a.created_at).toLocaleString('id-ID'))}</small></div><button class="btn sm danger" onclick="annDel(${a.id})">Hapus</button></div>`).join('') || '<p class="hint">Belum ada pengumuman.</p>';
+}
+async function annDel(id) {
+    if (!confirm('Hapus pengumuman ini dari riwayat?')) return;
+    await sb.from('announcements').delete().eq('id', id);
+    annLoad();
+}
+async function annSend() {
+    annSnd.unlock();
+    const title = ($('#an_t').value || 'Pengumuman').trim(), message = $('#an_m').value.trim(), duration = Math.min(120, Math.max(4, +$('#an_d').value || 12));
+    if (!message) return toast('Isi pengumuman belum ditulis');
+    const b = $('#an_go'); b.disabled = true;
+    let row = null;
+    const { data, error } = await sb.from('announcements').insert({ title, message, duration, created_by: me.id }).select().single();
+    if (error) {
+        $('#an_sql').hidden = false;
+        row = { id: 'b' + Date.now(), title, message, duration, created_at: new Date().toISOString() };
+        $('#an_msg').textContent = 'Tabel belum ada, terkirim via broadcast saja (tidak tersimpan).';
+    } else { row = data; $('#an_msg').textContent = 'Terkirim ke semua pengguna aktif.'; }
+    try { annInit(); if (annCh) await annCh.send({ type: 'broadcast', event: 'announce', payload: row }); } catch (e) { }
+    annShow(row); // konfirmasi langsung di layar admin (dedupe by id)
+    $('#an_m').value = ''; b.disabled = false;
+    toast('Pengumuman dikirim');
+    annLoad();
+}
+
+/* ===== ULTRA: partikel kilau tambahan ===== */
+(function () {
+    const root = document.documentElement;
+    let layer = null;
+    const sync = () => {
+        const on = root.dataset.fx === 'high' && root.dataset.ultra && !matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (on && !layer) {
+            layer = document.createElement('div'); layer.id = 'nmsp'; layer.setAttribute('aria-hidden', 'true');
+            const n = innerWidth < 600 ? 16 : 30;
+            for (let i = 0; i < n; i++) {
+                const e = document.createElement('i');
+                e.style.cssText = `left:${Math.random() * 100}%;top:${Math.random() * 100}%;--s:${6 + Math.random() * 12}px;--d:${3 + Math.random() * 4}s;--l:${(Math.random() * 5).toFixed(2)}s`;
+                layer.appendChild(e);
+            }
+            document.body.appendChild(layer);
+        } else if (!on && layer) { layer.remove(); layer = null; }
+    };
+    new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-fx', 'data-ultra'] });
+    if (document.body) sync(); else addEventListener('DOMContentLoaded', sync);
 })();
 </script>
 </body>
