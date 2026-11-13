@@ -1174,7 +1174,10 @@ video {
   position: fixed;
   top: calc(14px + env(safe-area-inset-top));
   left: 50%;
-  transform: translate(-50%, -90px);
+  transform: translate(-50%, calc(-100% - 40px - env(safe-area-inset-top, 0px)));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
   z-index: 300;
   padding: 12px 22px;
   border-radius: 999px;
@@ -1182,7 +1185,7 @@ video {
   border: 1px solid rgba(255, 255, 255, .3);
   backdrop-filter: blur(14px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, .4), 0 0 24px rgba(var(--glow), .5);
-  transition: transform .5s cubic-bezier(.3, 1.4, .4, 1);
+  transition: transform .5s cubic-bezier(.3, 1.4, .4, 1), opacity .3s ease, visibility 0s linear .5s;
   font-family: var(--font);
   font-weight: 500;
   max-width: 90vw;
@@ -1190,6 +1193,13 @@ video {
 
 .toast.on {
   transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
+
+.toast:empty {
+  display: none;
 }
 
 /* ============ AVATAR / PROFIL ============ */
@@ -2138,7 +2148,6 @@ html[data-fx=high] #nt .nc{box-shadow:0 18px 50px rgba(10,2,6,.55),0 0 34px rgba
 #nt p{margin:0 0 16px;max-height:40vh;overflow:auto;line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}
 #nt .nok{width:100%}
 #nt .nbar{position:absolute;left:0;bottom:0;width:100%;height:3px;background:var(--pk);transform-origin:left;animation:ntbar var(--d,10s) linear forwards}
-#nt .nc:hover .nbar{animation-play-state:paused}
 #nt.out{animation:ntout .25s forwards}
 #nt.out .nc{opacity:0;transform:translateY(12px) scale(.95);transition:opacity .25s,transform .25s}
 @keyframes ntfade{from{opacity:0}}
@@ -3138,11 +3147,15 @@ document.addEventListener('click', e => {
         sClick();
 });
 
+let toastT = 0, toastExp = 0;
 function toast(m) {
     const t = $('#toast');
+    if (!t) return;
+    clearTimeout(toastT);
     t.textContent = m;
+    toastExp = Date.now() + 2600;
     t.classList.add('on');
-    setTimeout(() => t.classList.remove('on'), 2600);
+    toastT = setTimeout(() => t.classList.remove('on'), 2600);
 }
 
 // ---- auth ----
@@ -3892,7 +3905,7 @@ const rtBadge = id => ratings[id] ? `<em class="rt">★ ${ratings[id].avg}</em>`
 const isNewTitle = t => { const d = Date.parse(t.created_at); return !isNaN(d) && Date.now() - d < 7 * 864e5 && d < Date.now() + 864e5; };
 
 const isFrame = u => /#frame$/.test(u || '');
-const poster = t => `<div class="poster${isFrame(t.thumbnail_url) ? ' frm' : ''}" data-id="${t.id}" ${isFrame(t.thumbnail_url) ? `style="--f:url('${esc(String(t.thumbnail_url).replace(/#frame$/, ''))}')"` : bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${isFrame(t.thumbnail_url) ? '<i class="frmi"></i>' : ''}${(t.cutout_url || t.character_url) ? `<img class="cut" alt="" loading="lazy" decoding="async" src="${esc(t.cutout_url || t.character_url)}">` : ''}${t.type === 'series' ? '<em class="tag">Series</em>' : ''}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
+const poster = t => `<div class="poster${isFrame(t.thumbnail_url) ? ' frm' : ''}" data-id="${t.id}" ${isFrame(t.thumbnail_url) ? `style="--f:url('${esc(String(t.thumbnail_url).replace(/#frame$/, ''))}')"` : bg(sm(t.thumbnail_url))} onclick="openTitle(${t.id})">${isFrame(t.thumbnail_url) ? '<i class="frmi"></i>' : ''}${(t.cutout_url || t.character_url) ? `<img class="cut" alt="" loading="lazy" decoding="async" src="${esc(t.cutout_url || t.character_url)}">` : ''}${window.NMTax ? NMTax.badge(t) : (t.type === 'series' ? '<em class="tag">Series</em>' : '')}${isNewTitle(t) ? '<em class="nwb">Baru</em>' : ''}${rtBadge(t.id)}<span>${esc(t.title)}</span></div>`;
 
 const empty = m => `<div class="empty"><img class="eimg" src="img/chick.png" alt="">${m}</div>`;
 
@@ -3924,10 +3937,10 @@ const views = {
         const mv = titles.filter(t => t.type !== 'series'), sr = titles.filter(t => t.type === 'series');
         const rt = t => ratings[t.id] ? ratings[t.id].avg : 0, vw = t => vcount[t.id] || 0;
         const gcount = {};
-        titles.forEach(t => (t.genre || '').split(',').map(x => x.trim()).filter(Boolean).forEach(g => (gcount[g] = gcount[g] || []).push(t)));
-        const gens = Object.entries(gcount).sort((x, y) => y[1].length - x[1].length).slice(0, 8);
+        NMTax.genreMap(titles, gcount);
+        const gens = Object.entries(gcount).sort((x, y) => y[1].length - x[1].length).slice(0, 14);
         const cats = {};
-        titles.forEach(t => { const c = catLabel(t); if (c) (cats[c] = cats[c] || []).push(t); });
+        titles.forEach(t => { const c = catLabel(t); if (c && c.toLowerCase() !== 'film') (cats[c] = cats[c] || []).push(t); });
         const top10 = [...titles].sort((x, y) => vw(y) - vw(x) || rt(y) - rt(x) || 0).slice(0, 10);
         const trend = titles.filter(t => vw(t) > 0).sort((x, y) => vw(y) - vw(x)).slice(0, 20);
         const rated = titles.filter(t => ratings[t.id]).sort((x, y) => rt(y) - rt(x) || ratings[y.id].n - ratings[x.id].n).slice(0, 20);
@@ -3942,9 +3955,10 @@ const views = {
         Object.entries(cats).forEach(([c, l]) => l.length >= 2 && !gcount[c] && add('tv', c, l, c));
         if (mv.length && sr.length) { add('film', 'Film', mv, 'Film'); add('tv', 'Series', sr, 'Series'); }
         add('clock', 'Rilis terbaru', yrs.length > 3 ? yrs : []);
+        NMTax.extraRows(titles).forEach(r => add(r.ico, r.name, r.l, r.g));
         const rowHtml = r => r.top ? `<section class="nfr nfr-top"><h2>${ic('star')} Top 10 di NauMovie</h2><div class="row">${r.top.map((t, i) => `<div class="t10"><b>${i + 1}</b>${poster(t)}</div>`).join('')}</div></section>`
             : `<section class="nfr"><h2>${ic(r.ico)} ${esc(r.name)}${r.g ? `<button class="nfall" onclick="nfGo('${esc(r.g).replace(/'/g, "\\'")}')">Lihat semua ›</button>` : ''}</h2><div class="row">${r.l.map(poster).join('')}</div></section>`;
-        const pills = `<nav class="nfpills row" aria-label="Kategori">${[['Semua', ''], ['Film', 'Film'], ['Series', 'Series'], ...gens.map(([g]) => [g, g])].map(([n, g]) => `<button class="chip" onclick="nfGo('${esc(g).replace(/'/g, "\\'")}')">${esc(n)}</button>`).join('')}</nav>`;
+        const pills = NMTax.pillsHtml(titles);
         $('#v').innerHTML = `<p class="hi">Halo, <b class="gt">${esc(me.username)}</b> ${ic('heart')}</p><p class="sub">Mau nonton apa hari ini? <button class="btn sm ghost" onclick="randomPick()">${ic('sparkle')} Acak film</button></p><nav class="shelf shelf-m" aria-label="Koleksi">${shelfBtns()}</nav>${pills}<div class="hero glass" id="hero"></div><div id="nfrows">${R.slice(0, 4).map(rowHtml).join('')}</div><div id="nfmore"></div>`;
         // baris sisanya dimuat saat mendekati layar (ringan untuk perangkat lemah)
         const rest = R.slice(4);
@@ -4052,7 +4066,7 @@ ${row('Keluar', 'Akhiri sesi di perangkat ini', `<button class="btn sm danger" o
         const body = {
             usr: () => admUsr(),
             cat: () => `<div class="sbox">${ic('search')}<input id="aq" placeholder="Cari di katalog..." value="${esc(q)}" autocomplete="off"></div><p class="hint">${titles.length} judul · ${sers.length} series</p><div id="alist">${adminList(q)}</div>`,
-            add: () => `<div class="glass pad"><div class="fgrid">${f('Judul', '<input id="a_t">')}${f('Jenis', '<select id="a_ty"><option value="movie">Film</option><option value="series">Series</option></select>')}${f('Tahun', '<input id="a_y" type="number">')}${f('Genre (pisah koma)', '<input id="a_g">')}${f('Kategori', '<select id="a_cat"><option value="film">Film</option><option value="anime">Anime</option></select>')}</div>${f('Deskripsi', '<textarea id="a_d"></textarea>')}<div class="fgrid">${f('Video (link .mp4/.m3u8 atau upload)', '<input id="a_v"><input id="a_vf" type="file" accept="video/*">')}${f('Thumbnail (link atau upload)', '<input id="a_th"><input id="a_thf" type="file" accept="image/*">')}</div><button class="btn glow" style="width:100%" onclick="addTitle()">Simpan judul</button></div>`,
+            add: () => `<div class="glass pad"><div class="fgrid">${f('Judul', '<input id="a_t">')}${f('Jenis', '<select id="a_ty"><option value="movie">Film</option><option value="series">Series</option></select>')}${f('Tahun', '<input id="a_y" type="number">')}${f('Genre (pisah koma)', '<input id="a_g">')}${f('Kategori', '<input id="a_cat" list="nm_cats" value="film" placeholder="film / anime / drama / kartun..." autocomplete="off"><datalist id="nm_cats">' + (window.NMTax ? NMTax.catOptions() : '') + '</datalist>')}</div>${f('Deskripsi', '<textarea id="a_d"></textarea>')}<div class="fgrid">${f('Video (link .mp4/.m3u8 atau upload)', '<input id="a_v"><input id="a_vf" type="file" accept="video/*">')}${f('Thumbnail (link atau upload)', '<input id="a_th"><input id="a_thf" type="file" accept="image/*">')}</div><button class="btn glow" style="width:100%" onclick="addTitle()">Simpan judul</button></div>`,
             ep: () => sers.length ? `<div class="glass pad"><div class="fgrid">${f('Series', `<select id="e_t">${sers.map(t => `<option value="${t.id}">${esc(t.title)}</option>`).join('')}</select>`)}${f('Season', '<input id="e_s" type="number" placeholder="1">')}${f('Episode ke', '<input id="e_n" type="number">')}${f('Judul episode', '<input id="e_nm">')}</div>${f('Video (link atau upload)', '<input id="e_v"><input id="e_vf" type="file" accept="video/*">')}${f('Thumbnail (opsional)', '<input id="e_th">')}<button class="btn glow" style="width:100%" onclick="addEp()">Simpan episode</button></div>` : empty('Belum ada series. Tambah dulu di tab Tambah'),
             fb: () => `<div id="fblist">${skel(2)}</div>`,
             notice: () => noticeForm(),
@@ -4077,8 +4091,6 @@ const adminList = q => titles.filter(t => t.title.toLowerCase().includes((q || '
 const item = (t, extra = '') => t ? `<div class="item glass glow" onclick="openTitle(${t.id})"><div class="th" ${bg(sm(t.thumbnail_url, 'w154'))}></div><div class="inf"><b>${esc(t.title)}</b><br><small>${esc(t.genre || '')} ${t.year || ''}${ratings[t.id] ? ' · ★ ' + ratings[t.id].avg : ''}</small>${extra.startsWith('<div') ? extra : ''}</div>${extra.startsWith('<button') ? extra : ''}</div>` : '';
 
 // ---- pemutar: streaming langsung dari link CDN (tanpa simpan file) ----
-// Deteksi pintar: isi link dibaca (bukan hanya ekstensi). Mendukung mp4/webm, HLS (m3u8, juga tanpa ekstensi),
-// DASH (.mpd), dan fMP4 / .m4s (lengkap dengan init) lewat MediaSource. Pesan error menjelaskan penyebab sebenarnya.
 let hlsI = null, wd = null, hlsP = null;
 const LOW = document.documentElement.classList.contains('lite');
 
@@ -4090,279 +4102,70 @@ const loadHls = () => window.Hls ? Promise.resolve() : (hlsP = hlsP || new Promi
     document.head.appendChild(sc);
 }));
 
-// laporkan kegagalan ke pemutar (overlay) dan halaman (toast); setelah ini error bawaan <video> tidak ditampilkan lagi
-function smartFail(v, msg) {
-    v._rec = true;
-    setTimeout(() => { try { v.dispatchEvent(new CustomEvent('smarterror', { detail: msg })); } catch (e) { } }, 0);
-}
-
-function mseDetach(v) {
-    if (v._mseAbort) { try { v._mseAbort.abort(); } catch (e) { } v._mseAbort = null; }
-    if (v._mseUrl) { try { URL.revokeObjectURL(v._mseUrl); } catch (e) { } v._mseUrl = null; }
-    if (v._blobs) { v._blobs.forEach(u => { try { URL.revokeObjectURL(u); } catch (e) { } }); v._blobs = null; }
-    v._mse = null; v._mseGo = false;
-}
-
-function hlsPlay(v, src, at, tag) {
-    loadHls().then(() => {
-        if (v._u !== tag || !v.isConnected) return;
-        if (!Hls.isSupported()) return smartFail(v, 'Browser ini belum mendukung stream m3u8');
-        let fails = 0;
-        const h = hlsI = new Hls({
-            maxBufferLength: LOW ? 20 : 50,
-            maxMaxBufferLength: LOW ? 40 : 120,
-            maxBufferSize: (LOW ? 24 : 80) * 1e6,
-            maxBufferHole: .6,
-            nudgeMaxRetry: 8,
-            backBufferLength: LOW ? 8 : 30,
-            capLevelToPlayerSize: true,
-            lowLatencyMode: false,
-            enableWorker: true,
-            startFragPrefetch: true,
-            abrEwmaDefaultEstimate: 2e6,
-            fragLoadingTimeOut: 30000,
-            fragLoadingMaxRetry: 8,
-            fragLoadingRetryDelay: 800,
-            fragLoadingMaxRetryTimeout: 8000,
-            manifestLoadingMaxRetry: 5,
-            levelLoadingMaxRetry: 5,
-            startPosition: at > 0 ? at : -1
-        });
-        h.loadSource(src);
-        h.attachMedia(v);
-        // resolusi: batasi level otomatis sesuai pilihan (HP: 720p, layar besar: 1080p), semua level tetap bisa dipilih manual
-        h.on(Hls.Events.MANIFEST_PARSED, () => {
-            try {
-                const pref = localStorage.nm_res || 'auto', lim = pref === 'auto' ? (innerWidth <= 600 ? 720 : 1080) : (+pref || 1080);
-                let cap = -1;
-                h.levels.forEach((lv, i) => { if (lv.height && lv.height <= lim && (cap < 0 || lv.height >= h.levels[cap].height)) cap = i; });
-                if (cap >= 0 && h.levels.some(lv => lv.height > lim)) h.autoLevelCapping = cap;
-            } catch (e) { }
-            v.dispatchEvent(new Event('hlslevels'));
-        });
-        h.on(Hls.Events.LEVEL_SWITCHED, () => v.dispatchEvent(new Event('hlslevels')));
-        h.on(Hls.Events.ERROR, (_, d) => {
-            if (!d.fatal) return;
-            if (++fails > 4) { h.destroy(); if (hlsI === h) hlsI = null; return smartFail(v, 'Stream gagal dimuat, cek link m3u8-nya'); }
-            if (d.type === Hls.ErrorTypes.NETWORK_ERROR) h.startLoad();
-            else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) { if (fails > 1) h.swapAudioCodec(); h.recoverMediaError(); }
-            else { h.destroy(); if (hlsI === h) hlsI = null; smartFail(v, 'Stream gagal dimuat'); }
-        });
-    }).catch(() => smartFail(v, 'Pemutar HLS gagal dimuat, cek koneksi'));
-}
-
 function loadSrc(v, url, at) {
     if (hlsI) { hlsI.destroy(); hlsI = null; }
-    mseDetach(v);
-    v._rec = false; v._tried = false;
     v._u = url;
     const yp = ytParse(url);
     if (yp) { try { v.removeAttribute('src'); v.load(); } catch (e) { } return ytAttach(v, yp, at); }
     if (v._yt) ytDetach(v);
-    if (/^http:\/\//i.test(url || '') && location.protocol === 'https:') { v._tried = true; return smartFail(v, 'Link http:// diblokir browser di situs https. Ganti link video jadi https://'); }
     const isHls = /\.m3u8(\?|#|$)/i.test(url || '');
-    if (isHls && !v.canPlayType('application/vnd.apple.mpegurl')) return hlsPlay(v, url, at, url);
-    if (isMpd(url)) { // DASH tidak bisa diputar native: baca manifest, susun jadi HLS di memori
-        v._tried = true; v._rec = true;
-        try { v.removeAttribute('src'); v.load(); } catch (e) { }
-        return smartRecover(v, url, at);
-    }
-    if (v._errH) v.removeEventListener('error', v._errH);
-    v._retry = 0;
-    v._errH = () => {
-        const e = v.error;
-        if (v._u !== url || !v.isConnected || v._closed || !e) return;
-        if (v._mse) { smartFail(v, 'Browser gagal memutar video m4s/fMP4 ini (codec tidak didukung atau file rusak)'); return; }
-        if (v._mseUrl) return; // mode blob: kesalahan ditangani blobPlay
-        // link tidak dikenali / tidak bisa didecode / gagal terus: baca isi link, lalu pilih cara putar yang cocok
-        if (!v._tried && (e.code === 4 || (e.code === 3 && !v.readyState) || v._retry >= 4)) { v._tried = true; v._rec = true; smartRecover(v, url, at); return; }
-        if (e.code === 4 || v._retry >= 4) return;
-        const n = ++v._retry, pos = v.currentTime || at || 0;
-        setTimeout(() => {
-            if (v._u !== url || !v.isConnected || v._closed) return;
-            v.src = String(url).replace(/#q\d+p$/, '');
-            v.addEventListener('loadedmetadata', () => { if (pos > 0) v.currentTime = pos; v.play().catch(() => { }); }, { once: true });
-            v.load();
-        }, 700 * n);
-    };
-    v.addEventListener('error', v._errH);
-    v.preload = 'auto';
-    v.src = String(url).replace(/#q\d+p$/, ''); // #qXXXp hanya penanda pilihan kualitas, tidak dikirim ke server
-    if (at > 0) v.addEventListener('loadedmetadata', () => { v.currentTime = at; }, { once: true });
-    v.load();
-}
-
-// ---- baca awal link (512 KB): HLS? DASH? fMP4 lengkap? segmen tanpa init? halaman web? ----
-async function smartHead(res, n) {
-    if (!res.body || !res.body.getReader) return new Uint8Array(await res.arrayBuffer()).subarray(0, n);
-    const rd = res.body.getReader(), parts = []; let len = 0;
-    while (len < n) { const { done, value } = await rd.read(); if (done) break; parts.push(value); len += value.length; }
-    try { rd.cancel(); } catch (e) { }
-    const out = new Uint8Array(Math.min(len, n)); let o = 0;
-    for (const x of parts) { const k = Math.min(x.length, out.length - o); out.set(x.subarray(0, k), o); o += k; if (o >= out.length) break; }
-    return out;
-}
-
-async function mediaProbe(url) {
-    const clean = String(url).replace(/#q\d+p$/, ''), r = { kind: 'unknown', sn: null, off: 0, total: 0, range: false, why: '' };
-    const ac = new AbortController(), tm = setTimeout(() => ac.abort(), 12000);
-    try {
-        const res = await fetch(clean, { headers: { Range: 'bytes=0-' + (M4S_SNIFF - 1) }, signal: ac.signal, credentials: 'omit' });
-        if (!res.ok && res.status !== 206) { r.kind = 'http'; r.why = 'HTTP ' + res.status; return r; }
-        const cr = /\/(\d+)\s*$/.exec(res.headers.get('content-range') || '');
-        r.range = res.status === 206 && !!cr;
-        r.total = cr ? +cr[1] : (res.status === 200 ? +res.headers.get('content-length') || 0 : 0);
-        r.ct = (res.headers.get('content-type') || '').toLowerCase();
-        const buf = await smartHead(res, M4S_SNIFF);
-        if (buf.length > 20 && buf.subarray(0, 9).every(x => x === 0x30)) r.off = 9; // beberapa file .m4s diawali "000000000"
-        const head = new TextDecoder().decode(buf.subarray(r.off, r.off + 600)).replace(/^\uFEFF/, '').trimStart();
-        if (/^#EXTM3U/.test(head)) r.kind = 'hls';
-        else if (/<MPD[\s>]/i.test(head)) r.kind = 'dash';
-        else if (/^<!doctype html|^<html|^<head|^<body/i.test(head) || /text\/html/.test(r.ct)) r.kind = 'html';
-        else {
-            r.sn = m4sSniff(buf.subarray(r.off));
-            if (r.sn.ok) r.kind = r.sn.init ? (r.sn.frag ? 'fmp4' : 'mp4') : (r.sn.media ? 'seg' : 'mp4');
-        }
-        return r;
-    } catch (e) { r.kind = e && e.name === 'AbortError' ? 'timeout' : 'blocked'; return r; } finally { clearTimeout(tm); }
-}
-
-// m3u8 sementara di memori (blob) dari hasil m4sGroup: dipakai untuk DASH / segmen m4s tanpa upload
-function m4sBlobMaster(g, v) {
-    const mk = t => { const u = URL.createObjectURL(new Blob([t], { type: 'application/vnd.apple.mpegurl' })); (v._blobs = v._blobs || []).push(u); return u; };
-    const vu = mk(m4sList(g.video, M4S_DUR)), au = g.audio.segs.length ? mk(m4sList(g.audio, M4S_DUR)) : null;
-    const attrs = 'BANDWIDTH=' + (g.bw || 2000000) + (g.codecs ? ',CODECS="' + g.codecs + '"' : '') + (g.w && g.h ? ',RESOLUTION=' + g.w + 'x' + g.h : '') + (au ? ',AUDIO="aud"' : '');
-    return mk('#EXTM3U\n#EXT-X-VERSION:7\n' + (au ? '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,URI="' + au + '"\n' : '') + '#EXT-X-STREAM-INF:' + attrs + '\n' + vu + '\n');
-}
-
-async function smartRecover(v, url, at) {
-    const mine = () => v._u === url && v.isConnected && !v._closed;
-    const bad = m => { if (mine()) smartFail(v, m); };
-    let p;
-    try { p = await mediaProbe(url); } catch (e) { return bad('Gagal membaca link video'); }
-    if (!mine()) return;
-    const host = (() => { try { return new URL(url).hostname; } catch (e) { return 'server'; } })();
-    switch (p.kind) {
-        case 'hls': return hlsPlay(v, String(url).replace(/#q\d+p$/, ''), at, url);
-        case 'dash':
-            try {
-                const m = await mpdFetch(String(url).replace(/#q\d+p$/, '')), g = m4sGroup(m.items, m.meta);
-                if (!mine()) return;
-                return hlsPlay(v, m4sBlobMaster(g, v), at, url);
-            } catch (e) { return bad('DASH (.mpd) gagal dibaca: ' + (e.message || e)); }
-        case 'fmp4': return mseStart(v, url, p, at);
-        case 'mp4': {
-            const vt = p.sn && p.sn.tracks.find(t => t.kind === 'video');
-            if (vt && vt.codec && !/^avc1/.test(vt.codec)) return bad('Codec video ' + (/^(hvc1|hev1)/.test(vt.codec) ? 'H.265/HEVC' : /^av01/.test(vt.codec) ? 'AV1' : vt.codec) + ' tidak didukung browser ini. Pakai H.264 (mp4) atau m3u8.');
-            return blobPlay(v, url, p, at);
-        }
-        case 'seg': return bad('Ini hanya potongan segmen .m4s (tanpa init segment), tidak bisa diputar sendirian. Upload init + semua segmen di menu Upload JSON, atau pakai link master .m3u8 / .mpd.');
-        case 'html': return bad('Link mengarah ke halaman web, bukan file video. Pakai link langsung ke file (.mp4 / .m3u8 / .m4s).');
-        case 'http': return bad('Server ' + host + ' menolak (' + p.why + '). Link mungkin kedaluwarsa atau diproteksi hotlink.');
-        case 'timeout': return bad('Server ' + host + ' tidak merespons. Cek koneksi atau link-nya.');
-        case 'blocked': return bad('Server ' + host + ' tidak mengizinkan akses (CORS) atau link mati. Pastikan link https dan bisa dibuka langsung di browser.');
-        default: return bad('Format video tidak dikenali. Didukung: mp4 (H.264), m3u8, mpd, dan m4s fMP4 lengkap.');
-    }
-}
-
-// fMP4 / .m4s lengkap (ada init + fragmen): diputar progresif lewat MediaSource
-function mseStart(v, url, p, at) {
-    const MS = window.ManagedMediaSource || window.MediaSource;
-    if (!MS) return blobPlay(v, url, p, at);
-    const clean = String(url).replace(/#q\d+p$/, ''), trk = p.sn.tracks.filter(t => t.kind !== 'other');
-    const hasV = trk.some(t => t.kind === 'video'), cod = trk.map(t => t.codec).filter(Boolean).join(','), base = hasV ? 'video/mp4' : 'audio/mp4';
-    const mime = [cod ? `${base}; codecs="${cod}"` : '', base].filter(Boolean).find(t => MS.isTypeSupported(t));
-    if (!mime) return smartFail(v, 'Codec video tidak didukung browser ini' + (cod ? ' (' + cod + ')' : '') + '. Pakai H.264/AAC.');
-    const ms = new MS();
-    v._mse = ms; v._tried = true; v._rec = true;
-    if (MS === window.ManagedMediaSource) v.disableRemotePlayback = true;
-    const mine = () => v._u === url && v.isConnected && !v._closed && v._mse === ms;
-    v._mseUrl = URL.createObjectURL(ms);
-    v.src = v._mseUrl;
-    if (at > 0) v.addEventListener('loadedmetadata', () => { v.currentTime = at; }, { once: true });
-    if (hasV && !trk.some(t => t.kind === 'audio')) setTimeout(() => { if (mine()) toast('File m4s ini hanya berisi video (audio .m4s terpisah), jadi tanpa suara'); }, 800);
-    ms.addEventListener('sourceopen', async () => {
-        if (!mine() || v._mseGo) return;
-        v._mseGo = true;
-        let sb;
-        try { sb = ms.addSourceBuffer(mime); sb.mode = 'sequence'; } catch (e) { return smartFail(v, 'Browser menolak format video ini (' + (cod || 'fMP4') + ')'); }
-        const d = p.sn.sidxDur || (p.sn.ts && p.sn.dur ? p.sn.dur / p.sn.ts : 0);
-        if (d > 1 && d < 86400) { try { ms.duration = d; } catch (e) { } }
-        const ctl = v._mseAbort = new AbortController(), CH = LOW ? 1048576 : 2097152, lim = LOW ? 40 : 90;
-        const upd = () => new Promise(ok => sb.addEventListener('updateend', ok, { once: true }));
-        const sleep = t => new Promise(r => setTimeout(r, t));
-        const ahead = () => { try { const t = v.currentTime; for (let i = 0; i < v.buffered.length; i++) if (v.buffered.start(i) <= t + .5 && v.buffered.end(i) >= t) return v.buffered.end(i) - t; } catch (e) { } return 0; };
-        const append = async buf => {
-            for (let k = 0; k < 6; k++) {
-                try { if (sb.updating) await upd(); sb.appendBuffer(buf); await upd(); return; }
-                catch (e) {
-                    if (e.name !== 'QuotaExceededError') throw e;
-                    const t = v.currentTime;
-                    if (!sb.updating && t > 12) { try { sb.remove(0, t - 6); await upd(); } catch (x) { } } else await sleep(800);
-                }
-            }
-            throw new Error('buffer penuh');
+    if (isHls && !v.canPlayType('application/vnd.apple.mpegurl')) {
+        loadHls().then(() => {
+            if (v._u !== url || !v.isConnected) return;
+            if (!Hls.isSupported()) return toast('Browser ini belum mendukung stream m3u8');
+            let fails = 0;
+            const h = hlsI = new Hls({
+                maxBufferLength: LOW ? 20 : 50,
+                maxMaxBufferLength: LOW ? 40 : 120,
+                maxBufferSize: (LOW ? 24 : 80) * 1e6,
+                maxBufferHole: .6,
+                nudgeMaxRetry: 8,
+                backBufferLength: LOW ? 8 : 30,
+                capLevelToPlayerSize: true,
+                lowLatencyMode: false,
+                enableWorker: true,
+                startFragPrefetch: true,
+                abrEwmaDefaultEstimate: 2e6,
+                fragLoadingTimeOut: 30000,
+                fragLoadingMaxRetry: 8,
+                fragLoadingRetryDelay: 800,
+                fragLoadingMaxRetryTimeout: 8000,
+                manifestLoadingMaxRetry: 5,
+                levelLoadingMaxRetry: 5,
+                startPosition: at > 0 ? at : -1
+            });
+            h.loadSource(url);
+            h.attachMedia(v);
+            h.on(Hls.Events.ERROR, (_, d) => {
+                if (!d.fatal) return;
+                if (++fails > 4) { h.destroy(); if (hlsI === h) hlsI = null; return toast('Stream gagal dimuat, cek link m3u8-nya'); }
+                if (d.type === Hls.ErrorTypes.NETWORK_ERROR) h.startLoad();
+                else if (d.type === Hls.ErrorTypes.MEDIA_ERROR) { if (fails > 1) h.swapAudioCodec(); h.recoverMediaError(); }
+                else { h.destroy(); if (hlsI === h) hlsI = null; toast('Stream gagal dimuat'); }
+            });
+        }).catch(() => toast('Pemutar HLS gagal dimuat, cek koneksi'));
+    } else {
+        if (v._errH) v.removeEventListener('error', v._errH);
+        v._retry = 0;
+        v._errH = () => {
+            const e = v.error;
+            if (v._u !== url || !v.isConnected || v._closed || !e || e.code === 4 || v._retry >= 4) return;
+            const n = ++v._retry, pos = v.currentTime || at || 0, was = !v.paused;
+            setTimeout(() => {
+                if (v._u !== url || !v.isConnected || v._closed) return;
+                v.src = String(url).replace(/#q\d+p$/, '');
+                v.addEventListener('loadedmetadata', () => { if (pos > 0) v.currentTime = pos; v.play().catch(() => { }); }, { once: true });
+                v.load();
+            }, 700 * n);
         };
-        async function* chunks() {
-            if (p.range && p.total) {
-                for (let pos = p.off; pos < p.total; pos += CH) {
-                    const r = await fetch(clean, { headers: { Range: `bytes=${pos}-${Math.min(pos + CH, p.total) - 1}` }, signal: ctl.signal, credentials: 'omit' });
-                    if (!r.ok && r.status !== 206) throw new Error('HTTP ' + r.status);
-                    yield new Uint8Array(await r.arrayBuffer());
-                }
-            } else {
-                const r = await fetch(clean, { signal: ctl.signal, credentials: 'omit' });
-                if (!r.ok) throw new Error('HTTP ' + r.status);
-                const rd = r.body.getReader();
-                let skip = p.off, acc = [], n = 0;
-                for (; ;) {
-                    const { done, value } = await rd.read();
-                    if (value) { let b = value; if (skip) { if (skip >= b.length) { skip -= b.length; continue; } b = b.subarray(skip); skip = 0; } acc.push(b); n += b.length; }
-                    if (n >= 524288 || (done && n)) { const o = new Uint8Array(n); let q = 0; acc.forEach(x => { o.set(x, q); q += x.length; }); acc = []; n = 0; yield o; }
-                    if (done) break;
-                }
-            }
-        }
-        try {
-            for await (const b of chunks()) {
-                if (!mine()) return;
-                while (mine() && ahead() > lim) await sleep(1000); // jangan unduh jauh melebihi yang ditonton (hemat kuota & RAM)
-                if (!mine()) return;
-                await append(b);
-            }
-            if (mine() && ms.readyState === 'open') { if (sb.updating) await upd(); ms.endOfStream(); }
-        } catch (e) { if (mine() && !(e && e.name === 'AbortError')) smartFail(v, 'Streaming video terhenti: ' + (e.message || e.name || e)); }
-    });
+        v.addEventListener('error', v._errH);
+        v.preload = 'auto';
+        v.src = String(url).replace(/#q\d+p$/, ''); // #qXXXp hanya penanda pilihan kualitas, tidak dikirim ke server
+        if (at > 0) v.addEventListener('loadedmetadata', () => { v.currentTime = at; }, { once: true });
+        v.load();
+    }
 }
 
-// cadangan (tanpa MediaSource, mis. iPhone lama, atau mp4 yang ditolak native): unduh penuh lalu putar dari blob
-async function blobPlay(v, url, p, at) {
-    const mine = () => v._u === url && v.isConnected && !v._closed;
-    const clean = String(url).replace(/#q\d+p$/, ''), MAX = 300 * 1048576;
-    if (p.total && p.total > MAX) return smartFail(v, 'Browser ini tidak bisa memutar file ini langsung dan ukurannya terlalu besar (' + Math.round(p.total / 1048576) + ' MB). Pakai link m3u8 atau mp4 H.264 biasa.');
-    v._tried = true; v._rec = true;
-    const ctl = v._mseAbort = new AbortController();
-    try {
-        toast('Mengunduh video…');
-        const r = await fetch(clean, { signal: ctl.signal, credentials: 'omit' });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const rd = r.body.getReader(), tot = +r.headers.get('content-length') || p.total || 0, parts = []; let got = 0, last = 0;
-        for (; ;) {
-            const { done, value } = await rd.read(); if (done) break;
-            parts.push(value); got += value.length;
-            if (got > MAX) throw new Error('file terlalu besar');
-            if (tot && Date.now() - last > 1500) { last = Date.now(); toast('Mengunduh video… ' + Math.round(got / tot * 100) + '%'); }
-        }
-        if (!mine()) return;
-        if (p.off && parts.length) parts[0] = parts[0].subarray(p.off);
-        v._mseUrl = URL.createObjectURL(new Blob(parts, { type: 'video/mp4' }));
-        v._mse = null;
-        v.src = v._mseUrl;
-        v.addEventListener('error', () => { if (mine()) smartFail(v, 'Browser gagal memutar file video ini (codec tidak didukung atau file rusak)'); }, { once: true });
-        if (at > 0) v.addEventListener('loadedmetadata', () => { v.currentTime = at; }, { once: true });
-        v.load(); v.play().catch(() => { });
-    } catch (e) { if (mine() && !(e && e.name === 'AbortError')) smartFail(v, 'Gagal mengunduh video: ' + (e.message || e)); }
-}
 
 // ======================================================================
 // PEMUTAR YOUTUBE: YouTube IFrame API dibungkus supaya berperilaku seperti elemen <video>.
@@ -4504,7 +4307,7 @@ function watchdog(v) {
     });
     wd = setInterval(() => {
         if (!v.isConnected) return clearInterval(wd);
-        if (v._yt || v._mse || v.paused || v.ended || v.seeking || document.hidden || Math.abs(v.currentTime - last) > .05) { n = 0; last = v.currentTime; return; }
+        if (v._yt || v.paused || v.ended || v.seeking || document.hidden || Math.abs(v.currentTime - last) > .05) { n = 0; last = v.currentTime; return; }
         n++;
         if (n === 1) {
             const b = v.buffered;
@@ -4556,7 +4359,6 @@ function frameGuard(v) {
     addEventListener('pageshow', () => reset(2500));
 
     const revive = () => {
-        if (v._mse) return;
         const at = v.currentTime, u = v._u, rate = v.playbackRate, was = suppress;
         st.fails = st.fails.filter(x => now() - x < 90000);
         st.fails.push(now());
@@ -4702,13 +4504,7 @@ function nmPlayer(root, c) {
     const ytqPref = () => { try { return localStorage.nm_ytq || 'auto'; } catch (e) { return 'auto'; } };
     const curRes = () => {
         if (v._yt) { const k = ytqPref(); return k === 'auto' ? 'AUTO' : (YQ_LBL[k] || 'AUTO').toUpperCase(); }
-        if (hlsI && hlsI.levels && hlsI.levels.length > 1) { // stream m3u8 dengan beberapa resolusi
-            if (hlsI.autoLevelEnabled) return 'AUTO';
-            const lv = hlsI.levels[hlsI.currentLevel]; return lv && lv.height ? lv.height + 'P' : 'AUTO';
-        }
-        const s = srcs().find(x => x.url === c.curUrl());
-        if (s) return String(s.res).toUpperCase();
-        return v.videoHeight ? snapRes(v.videoHeight) + 'P' : 'AUTO'; // resolusi asli dari videonya
+        const s = srcs().find(x => x.url === c.curUrl()); return s ? String(s.res).toUpperCase() : 'AUTO';
     };
     const paintQ = () => { q('.np-qmini').textContent = q('.np-qfull').textContent = curRes(); };
     const canCtl = () => { if (!c.quiet()) { toast('Hanya host yang mengatur pemutaran'); return false; } return true; };
@@ -4798,13 +4594,7 @@ function nmPlayer(root, c) {
             items.push({ l: 'Auto', on: k === 'auto', fn: () => { try { localStorage.nm_ytq = 'auto'; } catch (e) { } v._ytq.set('auto'); paintQ(); toast('Kualitas YouTube: Auto'); } });
             list.forEach(x => items.push({ l: YQ_LBL[x], on: k === x, fn: () => { try { localStorage.nm_ytq = x; } catch (e) { } v._ytq.set(x); paintQ(); toast('Kualitas diminta: ' + YQ_LBL[x] + ' (YouTube bisa menyesuaikan)'); } }));
         }
-        if (hlsI && hlsI.levels && hlsI.levels.length > 1) {
-            const H = hlsI, lv = H.levels.map((x, i) => ({ x, i })).filter(o => o.x.height).sort((a, b) => b.x.height - a.x.height);
-            items.push({ l: 'Resolusi stream', s: 'Auto menyesuaikan koneksi', keep: 1, fn: () => { } });
-            items.push({ l: 'Auto', on: H.autoLevelEnabled, fn: () => { H.autoLevelCapping = -1; H.currentLevel = -1; setTimeout(paintQ, 300); toast('Resolusi: Auto'); } });
-            lv.forEach(o => items.push({ l: o.x.height + 'p', s: o.x.bitrate ? Math.round(o.x.bitrate / 1000) + ' kbps' : '', on: !H.autoLevelEnabled && H.currentLevel === o.i, fn: () => { H.autoLevelCapping = -1; H.currentLevel = o.i; setTimeout(paintQ, 300); toast('Resolusi: ' + o.x.height + 'p'); } }));
-        }
-        if (items.filter(i => !i.keep).length < 2 && !v._yt) return toast('Hanya ada satu kualitas untuk video ini');
+        if (items.filter(i => i.s !== 'Tidak dijamin').length < 2 && !v._yt) return toast('Hanya ada satu kualitas untuk video ini');
         openSheet('Kualitas', items);
     };
     const episodesSheet = () => {
@@ -5003,9 +4793,7 @@ function nmPlayer(root, c) {
     on(v, 'seeked', () => root.classList.remove('np-wait'));
     ['timeupdate', 'progress', 'loadedmetadata', 'durationchange'].forEach(n => on(v, n, paint));
     on(v, 'volumechange', () => { qa('.np-mute use').forEach(u => u.setAttribute('href', v.muted || v.volume === 0 ? '#np-i-mute' : '#np-i-vol')); drawV(); });
-    on(v, 'error', () => setTimeout(() => { if (!v._closed && !v._rec) showErr('Video gagal dimuat. Coba lagi atau ganti kualitas.'); }, 0));
-    on(v, 'smarterror', e => { if (!v._closed) showErr(e.detail || 'Video gagal dimuat'); });
-    on(v, 'loadedmetadata', () => paintQ()); on(v, 'hlslevels', () => paintQ());
+    on(v, 'error', () => { if (!v._closed) showErr('Video gagal dimuat. Coba lagi atau ganti kualitas.'); });
     on(v, 'ended', () => { const n = nextEp(); if (n && localStorage.nm_auto !== '0' && c.quiet()) startNext(n); });
     v.loop = prefs.loop; v.style.objectFit = prefs.fit; v.defaultPlaybackRate = prefs.rate; v.playbackRate = prefs.rate;
 
@@ -5172,7 +4960,7 @@ async function openTitle(id, roomMode = false) {
 <nav class="ptabs" id="ptabs">${roomMode ? '<button class="on" data-pt="info">Informasi</button><button data-pt="room">Nobar</button>' : '<button class="on" data-pt="info">Informasi</button><button data-pt="cm">Komentar</button>'}</nav>
 <div class="ppanel" id="pt-info">
 <div class="pcard" id="pcEp"></div>
-<div class="pcard pinfo"><div class="pposter" ${bg(sm(t.thumbnail_url, 'w185'))}></div><div class="ptx"><h2 class="ptitle">${esc(t.title)}</h2><p class="psyn" id="psyn">${esc(t.description || 'Belum ada sinopsis.')}</p><button class="plink" id="psynb" hidden>Lihat selengkapnya</button><div class="pchips">${String(t.genre || '').split(',').map(x => x.trim()).filter(Boolean).slice(0, 4).map(g => `<span>${esc(g)}</span>`).join('')}</div></div></div>
+<div class="pcard pinfo"><div class="pposter" ${bg(sm(t.thumbnail_url, 'w185'))}></div><div class="ptx"><h2 class="ptitle">${esc(t.title)}</h2><p class="psyn" id="psyn">${esc(t.description || 'Belum ada sinopsis.')}</p><button class="plink" id="psynb" hidden>Lihat selengkapnya</button><div class="pchips">${window.NMTax ? NMTax.chipsHtml(t) : ''}</div></div></div>
 <div class="pcard pacts"><span class="acts" data-acts></span></div>
 <div class="pcard"><b class="ph">Beri rating</b><div class="rate" id="rate"></div></div>
 ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas" id="pseas"></div><div class="pnum" id="eps"></div></section>' : ''}
@@ -5280,8 +5068,7 @@ ${isS ? '<section class="pcard"><b class="ph">Daftar Series</b><div class="pseas
             reload: at => { loadSrc(vv, curUrl, at); vv.play().catch(() => { }); }
         });
         filmState(id).then(() => np && np.paintMark()).catch(() => { });
-        vv.addEventListener('error', () => setTimeout(() => { if (!vv._closed && !vv._yt && !vv._rec) toast('Video gagal dimuat. Link harus HTTPS; format yang didukung: mp4 (H.264), m3u8, mpd, m4s'); }, 0));
-        vv.addEventListener('smarterror', e => { if (!vv._closed) toast(e.detail || 'Video gagal dimuat'); });
+        vv.addEventListener('error', () => vv._closed || vv._yt || toast('Video gagal dimuat. Cek link CDN: harus HTTPS, format mp4 (H.264) atau m3u8'));
         saveFn = () => dtSaveAll(id, curEp, vv);
         {
             const at = dtResumeAt(id, curEp, hist);
@@ -6252,46 +6039,6 @@ async function up(bucket, f) {
     return sb.storage.from(bucket).getPublicUrl(p).data.publicUrl;
 }
 
-// ---- otomatis: link m4s / mpd di sumber mana pun (tambah manual, episode, katalog lama) dikenali & dibereskan ----
-async function autoSources(title, sources) {
-    const rec = { anime_title: title, qualities: sources.map(s => ({ nama_quality: s.res, source_quality: s.url })) };
-    const d = await jqDetect([rec]);
-    const out = cleanSources(rec.qualities.map(q => ({ res: q.nama_quality, url: q.source_quality })));
-    const key = l => JSON.stringify(l.map(x => [x.url, x.res]));
-    return { sources: out, changed: key(out) !== key(sources), infos: d.infos, warns: d.warns };
-}
-// pindai katalog lama: semua judul / episode yang masih berisi link .m4s / .mpd mentah diperbaiki sekali jalan
-async function fixAllM4s() {
-    if (window._fm4) return;
-    window._fm4 = true;
-    try {
-        toast('Memindai katalog untuk link m4s / mpd…');
-        const flt = 'video_url.ilike.%m4s%,video_url.ilike.%.mpd%,video_url.ilike.%cmfv%';
-        const [t, e] = await Promise.all([
-            sb.from('titles').select('id,title,video_url,sources').or(flt),
-            sb.from('episodes').select('id,title_id,number,video_url,sources').or(flt)
-        ]);
-        if (t.error) throw t.error;
-        const rows = [...(t.data || []).map(r => ({ ...r, tb: 'titles', nm: r.title })), ...((e.error ? [] : e.data) || []).map(r => ({ ...r, tb: 'episodes', nm: 'Episode ' + r.number }))];
-        if (!rows.length) return toast('Tidak ada link m4s / mpd yang perlu diperbaiki');
-        let ok = 0, same = 0, fail = 0;
-        for (const r of rows) {
-            try {
-                const src = Array.isArray(r.sources) && r.sources.length ? r.sources : [{ res: 'Auto', url: r.video_url }];
-                const a = await autoSources(r.nm, src);
-                if (!a.changed) { same++; continue; }
-                const up = await sb.from(r.tb).update({ sources: a.sources, video_url: pickSrc({ sources: a.sources }, 1080).url }).eq('id', r.id);
-                if (up.error) throw up.error;
-                ok++;
-            } catch (x) { fail++; }
-            toast(`Memperbaiki link ${ok + same + fail}/${rows.length}…`);
-        }
-        await refreshTitles();
-        toast(`Selesai: ${ok} diperbaiki, ${same} sudah benar${fail ? ', ' + fail + ' gagal' : ''}`);
-    } catch (x) { toast('Gagal memindai: ' + (x.message || x)); }
-    finally { window._fm4 = false; }
-}
-
 async function addTitle() {
     try {
         toast('Menyimpan...');
@@ -6303,20 +6050,12 @@ async function addTitle() {
             th = await up('thumbnails', tf);
         if (!$('#a_t').value || (!v && $('#a_ty').value === 'movie'))
             return toast('Judul & video wajib (series boleh kosong, isi lewat episode)');
-        let srcs = null;
-        if (v && (isM4s(v) || isMpd(v))) { // deteksi otomatis m4s / mpd
-            toast('Mendeteksi format video…');
-            const a = await autoSources($('#a_t').value, [{ res: 'Auto', url: v.trim() }]);
-            if (a.sources.length) { srcs = a.sources; v = pickSrc({ sources: a.sources }, 1080).url; }
-            if (a.warns.length) toast(a.warns[0]);
-        }
         const { error } = await sb.from('titles').insert({
-            ...(srcs ? { sources: srcs } : {}),
             title: $('#a_t').value,
             type: $('#a_ty').value,
             year: +$('#a_y').value || null,
             genre: $('#a_g').value,
-            category: $('#a_cat').value || null,
+            category: ($('#a_cat').value || '').toLowerCase().trim().slice(0, 30) || null,
             description: $('#a_d').value,
             video_url: v || null,
             thumbnail_url: th || null,
@@ -6336,29 +6075,7 @@ async function addTitle() {
 const TMDB_G = { 28: 'Aksi', 12: 'Petualangan', 16: 'Animasi', 35: 'Komedi', 80: 'Kriminal', 99: 'Dokumenter', 18: 'Drama', 10751: 'Keluarga', 14: 'Fantasi', 36: 'Sejarah', 27: 'Horor', 10402: 'Musik', 9648: 'Misteri', 10749: 'Romantis', 878: 'Fiksi Ilmiah', 53: 'Thriller', 10752: 'Perang', 37: 'Western', 10759: 'Aksi', 10765: 'Fiksi Ilmiah', 10762: 'Anak', 10764: 'Reality', 10766: 'Sinetron' };
 
 // ---- resolusi & sumber video ----
-// bulatkan tinggi video asli (mis. 1038, 800) ke resolusi standar terdekat
-function snapRes(h) { h = +h || 0; if (!h) return 0; let best = 144; for (const x of [144, 240, 360, 480, 540, 576, 720, 1080, 1440, 2160, 4320]) if (x <= h * 1.1) best = x; return best; }
-// baca resolusi dari label: 720p, 720p60, 1080i, 1920x1080, 4K, 2K, FHD, HD, SD, atau angka saja
-const resNum = r => {
-    const s = String(r == null ? '' : r).toLowerCase().trim();
-    if (!s) return 0;
-    let m = s.match(/(\d{3,4})\s*[x×]\s*(\d{3,4})/); if (m) return snapRes(Math.min(+m[1], +m[2]));
-    m = s.match(/(?:^|[^\d.])(\d{3,4})\s*[pi](?![a-z])/); if (m && +m[1] >= 100 && +m[1] <= 8000) return +m[1];
-    if (/(^|[^a-z0-9])(8k)([^a-z0-9]|$)/.test(s)) return 4320;
-    if (/(^|[^a-z0-9])(4k|uhd)([^a-z0-9]|$)/.test(s)) return 2160;
-    if (/(^|[^a-z0-9])(2k|qhd)([^a-z0-9]|$)/.test(s)) return 1440;
-    if (/(^|[^a-z0-9])(fhd|full ?hd)([^a-z0-9]|$)/.test(s)) return 1080;
-    if (/(^|[^a-z0-9])hd([^a-z0-9]|$)/.test(s)) return 720;
-    if (/(^|[^a-z0-9])sd([^a-z0-9]|$)/.test(s)) return 480;
-    return parseInt(s.replace(/\D/g, ''), 10) || 0;
-};
-// tebak resolusi dari nama file / folder di link (…/1080p/…, …_720p.mp4, …/720/…)
-function urlRes(u) {
-    let s = '';
-    try { s = decodeURIComponent(String(u || '').split('#')[0].split('?')[0]); } catch (e) { s = String(u || '').split('#')[0].split('?')[0]; }
-    const m = s.match(/(?:^|[^\d])(2160|1440|1080|720|576|540|480|360|240|144)p(?![a-z])/i) || s.match(/(?:^|[\/_.\-])(2160|1440|1080|720|480|360|240|144)(?=[\/_.\-]|$)/);
-    return m ? +m[1] : 0;
-}
+const resNum = r => parseInt(String(r || '').replace(/\D/g, ''), 10) || 0;
 // ---- deteksi YouTube: semua bentuk link (watch, youtu.be, embed, shorts, live, /v/, music., m., nocookie, playlist, link tanpa https) ----
 const YT_HOST = /^(?:[a-z0-9-]+\.)*(?:youtube\.com|youtube-nocookie\.com|youtu\.be|youtubekids\.com)$/i;
 const YT_ID = /^[\w-]{11}$/;
@@ -6395,7 +6112,7 @@ const isYt = u => !!ytParse(u);
 const ytCanon = u => { const p = ytParse(u); if (!p) return String(u || '').trim(); const a = []; if (p.id) a.push('v=' + p.id); if (p.list) a.push('list=' + p.list); if (p.start) a.push('t=' + p.start); return p.id ? 'https://www.youtube.com/watch?' + a.join('&') : 'https://www.youtube.com/playlist?list=' + p.list; };
 const ytThumb = u => { const p = ytParse(u); return p && p.id ? 'https://img.youtube.com/vi/' + p.id + '/hqdefault.jpg' : null; };
 // jenis sumber: youtube | hls | mp4 | cdn
-const srcKind = u => isYt(u) ? 'youtube' : /\.m3u8(\?|#|$)/i.test(u || '') ? 'hls' : /\.mpd(\?|#|$)/i.test(u || '') ? 'dash' : /\.(m4s|cmfv|cmfa)(\?|#|$)/i.test(u || '') ? 'm4s' : /\.(mp4|m4v|webm|mov|mkv|ogv)(\?|#|$)/i.test(u || '') ? 'mp4' : 'cdn';
+const srcKind = u => isYt(u) ? 'youtube' : /\.m3u8(\?|#|$)/i.test(u || '') ? 'hls' : /\.(mp4|m4v|webm|mov|mkv|ogv)(\?|#|$)/i.test(u || '') ? 'mp4' : 'cdn';
 // rapikan link: YouTube diseragamkan ke https://www.youtube.com/watch?v=ID, lainnya cukup di-trim
 const fixUrl = u => isYt(u) ? ytCanon(u) : String(u == null ? '' : u).trim();
 const srcRank = x => isYt(x && x.url) ? 1e5 : resNum(x && x.res);
@@ -6411,7 +6128,7 @@ async function ytTitle(u) {
         return j && j.title ? String(j.title).trim() : null;
     } catch (e) { return null; }
 }
-const catLabel = t => t && t.category ? String(t.category).replace(/^./, c => c.toUpperCase()) : '';
+const catLabel = t => t && t.category ? String(t.category).trim().replace(/(^|\s)\S/g, c => c.toUpperCase()) : '';
 
 // rapikan daftar sumber: buang link tidak valid / dobel, urut resolusi naik
 function cleanSources(list) {
@@ -6420,9 +6137,7 @@ function cleanSources(list) {
         const url = fixUrl((s && (s.url || s.link || s.src || s.source_quality)) || '');
         if (!okUrl(url) || seen.has(url)) return;
         seen.add(url);
-        let rs = isYt(url) ? 'YouTube' : String((s && (s.res || s.resolution || s.quality || s.nama_quality)) || '').trim();
-        if (!isYt(url) && !resNum(rs)) { const n = urlRes(url); if (n) rs = n + 'p'; }
-        out.push({ res: rs || 'Auto', url });
+        out.push({ res: isYt(url) ? 'YouTube' : String((s && (s.res || s.resolution || s.quality || s.nama_quality)) || '').trim() || 'Auto', url });
     });
     return out.sort((a, b) => srcRank(a) - srcRank(b));
 }
@@ -6468,7 +6183,7 @@ function normItem(x) {
     if (typeof x === 'string') x = { video_url: x };
     if (!x || typeof x !== 'object') return null;
     const pk = (...k) => { for (const n of k) if (x[n] != null && x[n] !== '') return x[n]; return null; };
-    const one = (u, res) => okUrl(u) ? [{ res: isYt(u) ? 'YouTube' : (resNum(res) ? String(res) : (urlRes(u) ? urlRes(u) + 'p' : String(res || 'Auto'))), url: fixUrl(u) }] : [];
+    const one = (u, res) => okUrl(u) ? [{ res: isYt(u) ? 'YouTube' : String(res || 'Auto'), url: fixUrl(u) }] : [];
 
     let sources = cleanSources(x.sources);
     if (!sources.length) sources = one(pk('video_url', 'video', 'url', 'link', 'src', 'file', 'stream'), pk('res', 'resolution', 'quality'));
@@ -6758,7 +6473,6 @@ async function tmdbBackfill() {
 }
 
 const impTab = () => `<div class="glass pad"><b>Import katalog (.json)</b><p class="hint">Pilih file katalog. Nama, kategori, resolusi, dan episode ikut terbaca. Kamu bisa cek ringkasannya dulu sebelum mulai.</p><input id="cat_f" type="file" accept=".json,application/json" onchange="catPick(this)"><div id="cat_prev"></div></div>
-<div class="glass pad"><b>Perbaiki link m4s / mpd otomatis</b><p class="hint">Memindai semua judul dan episode yang masih berisi link .m4s / .mpd mentah, lalu mengubahnya jadi sumber yang bisa diputar (resolusi ikut terbaca).</p><button class="btn sm glow" onclick="fixAllM4s()">Pindai &amp; perbaiki katalog</button></div>
 <div class="glass pad" id="imp_prog" hidden></div>
 ${impReport ? `<div class="glass pad"><b>Hasil import terakhir</b><p class="hint" style="white-space:pre-line">${esc(impReport)}</p></div>` : ''}
 <div class="glass pad"><b>Poster otomatis (TMDB)</b><p class="hint">Saat import, poster, sinopsis, genre, dan tahun diambil dari TMDB berdasarkan judul. Untuk judul lama yang posternya masih kosong:</p><button class="btn ghost" style="width:100%" onclick="tmdbBackfill()">${ic('sparkle')} Cari poster untuk ${titles.filter(t => !t.thumbnail_url).length} judul kosong</button></div>
@@ -6826,7 +6540,6 @@ function m4sBoxes(b, s = 0, e = b.length) {
 function m4sSniff(b) {
     const r = { ok: false, init: false, media: false, frag: false, brands: [], tracks: [], ids: [], tfdt: {}, sidxDur: 0, ts: 0, dur: 0 };
     if (!b || b.length < 8) return r;
-    if (b.length > 20 && b.subarray(0, 9).every(x => x === 0x30)) b = b.subarray(9); // file .m4s yang diawali "000000000"
     const top = m4sBoxes(b);
     if (!top.length || !M4S_BOX.concat(['moov']).includes(top[0].type)) return r;
     r.ok = true;
@@ -6983,7 +6696,6 @@ function m4sGroup(items, meta = {}) {
     const vt = vi && vi.tracks.find(t => t.kind === 'video'), at = (g.merged ? vi : ai) && (g.merged ? vi : ai).tracks.find(t => t.kind === 'audio');
     const mv = meta.video || {}, ma = meta.audio || {};
     if (vt && vt.h && !g.res) g.res = vt.h + 'p'; else if (mv.h && !g.res) g.res = mv.h + 'p';
-    g.w = (vt && vt.w) || mv.w || 0; g.h = (vt && vt.h) || mv.h || 0;
     const vc = (vt && vt.codec) || mv.codecs || '', ac = (at && at.codec) || ma.codecs || '';
     if (/^avc1\./.test(vc) && (ac || !g.audio.segs.length && !g.merged)) g.codecs = [vc, ac].filter(Boolean).join(',');
     const fix = (t, tr, mm) => { // durasi tiap segmen: dari MPD/data > selisih tfdt/timescale > sidx > default
@@ -7046,7 +6758,7 @@ async function m4sPublish(g, title, onP) {
         if (bad.length) throw new Error('link segmen tidak valid: ' + bad[0].name);
         const pl = async (r, k) => g[r].segs.length ? await put(`${base}/${k}.m3u8`, new Blob([m4sList(g[r], M4S_DUR)], { type: 'application/vnd.apple.mpegurl' }), 'application/vnd.apple.mpegurl') : null;
         const vu = await pl('video', 'video'), au = await pl('audio', 'audio');
-        const attrs = 'BANDWIDTH=' + (g.bw || 2000000) + (g.codecs ? ',CODECS="' + g.codecs + '"' : '') + (g.w && g.h ? ',RESOLUTION=' + g.w + 'x' + g.h : '') + (au ? ',AUDIO="aud"' : '');
+        const attrs = 'BANDWIDTH=' + (g.bw || 2000000) + (g.codecs ? ',CODECS="' + g.codecs + '"' : '') + (au ? ',AUDIO="aud"' : '');
         const master = '#EXTM3U\n#EXT-X-VERSION:7\n' + (au ? '#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud",NAME="Audio",DEFAULT=YES,AUTOSELECT=YES,URI="' + au + '"\n' : '')
             + '#EXT-X-STREAM-INF:' + attrs + '\n' + vu + '\n';
         return await put(`${base}/master.m3u8`, new Blob([master], { type: 'application/vnd.apple.mpegurl' }), 'application/vnd.apple.mpegurl');
@@ -7197,61 +6909,6 @@ async function m4sRecord(title, cover, items, onP) {
     return { rec: { anime_title: title, thumbnail_episode: cover || undefined, qualities: [{ nama_quality: g.res || 'Auto', source_quality: url }] }, warn: g.warn, info: [g.info] };
 }
 
-// ---- deteksi link m4s / mpd di dalam record katalog (qualities[].source_quality) ----
-// Dulu hanya JSON "mentah" yang discan; record berformat katalog langsung disimpan sehingga link .m4s tidak pernah dikenali.
-// Sekarang: .mpd -> master HLS; .m4s lengkap (init + fragmen) -> dibiarkan (diputar langsung oleh pemutar) + resolusi dibaca dari isinya;
-// segmen .m4s tanpa init / banyak segmen -> disusun jadi playlist HLS master.
-async function jqDetect(records) {
-    const warns = [], infos = [];
-    const isMq = q => q && typeof q.source_quality === 'string' && (isM4s(q.source_quality) || isMpd(q.source_quality));
-    for (const rec of records) {
-        if (!rec || typeof rec !== 'object') continue;
-        const hadQ = Array.isArray(rec.qualities);
-        const qs = hadQ ? rec.qualities : (typeof rec.source_quality === 'string' ? [{ nama_quality: rec.nama_quality, source_quality: rec.source_quality }] : []);
-        if (!qs.some(isMq)) continue;
-        const first = qs.find(isMq).source_quality;
-        const title = String(rec.anime_title || (rec.anime && rec.anime.nama_anime) || rec.nama_anime || guessTitle(first) || 'film');
-        const out = [], segs = [];
-        for (const q of qs) {
-            if (!isMq(q)) { out.push(q); continue; }
-            const u = String(q.source_quality).trim();
-            if (isMpd(u)) {
-                try {
-                    const m = await mpdFetch(u), g = m4sGroup(m.items, m.meta), url = await m4sPublish(g, title);
-                    out.push({ ...q, nama_quality: g.res || q.nama_quality || 'Auto', source_quality: url });
-                    infos.push(`${title} · dash: ${g.info}`); warns.push(...g.warn.map(w => title + ': ' + w));
-                } catch (e) { out.push(q); warns.push(`${title}: ${e.message || e}`); }
-            } else segs.push(q);
-        }
-        if (segs.length) {
-            const sn = await Promise.all(segs.map(q => m4sSniffUrl(String(q.source_quality).trim())));
-            const full = [], part = [];
-            segs.forEach((q, i) => (sn[i].ok && sn[i].init ? full : part).push({ q, s: sn[i] }));
-            full.forEach(({ q, s }) => {
-                const vt = s.tracks.find(t => t.kind === 'video'), hasA = s.tracks.some(t => t.kind === 'audio'), r = vt && vt.h ? snapRes(vt.h) : 0;
-                out.push(resNum(q.nama_quality) || !r ? q : { ...q, nama_quality: r + 'p' });
-                infos.push(`${title} · m4s lengkap${vt && vt.w ? ' ' + vt.w + 'x' + vt.h : ''}${hasA ? ' (video+audio)' : ' (video saja)'}`);
-                if (!hasA) warns.push(`${title}: file m4s hanya berisi video, audio .m4s harus digabung terpisah (tanpa suara)`);
-            });
-            if (part.length) {
-                const known = part.some(x => x.s.ok);
-                if (!known && part.length < 2) out.push(part[0].q); // sulit dipastikan (mis. CORS): pemutar yang mendiagnosis saat diputar
-                else {
-                    try {
-                        const items = part.map(({ q, s }) => ({ name: String(q.source_quality).trim(), url: String(q.source_quality).trim(), sniff: s }));
-                        const g = m4sGroup(items), url = await m4sPublish(g, title);
-                        out.push({ nama_quality: g.res || 'Auto', source_quality: url });
-                        infos.push(`${title} · m4s: ${g.info}`); warns.push(...g.warn.map(w => title + ': ' + w));
-                    } catch (e) { part.forEach(x => out.push(x.q)); warns.push(`${title}: segmen m4s gagal disusun (${e.message || e})`); }
-                }
-            }
-        }
-        rec.qualities = out;
-        if (!hadQ) { delete rec.source_quality; delete rec.nama_quality; }
-    }
-    return { warns, infos };
-}
-
 // satu file bisa: 1 objek episode, array episode, atau objek berisi array (data / episodes / ...)
 function jqRecords(j) {
     const isRec = o => !!o && typeof o === 'object' && !Array.isArray(o) && (Array.isArray(o.qualities) || !!o.source_quality);
@@ -7269,7 +6926,7 @@ function jqLadder(list, on) {
         if (!okUrl(url) || seen.has(url)) return;
         seen.add(url);
         if (isYt(url)) return real.push({ res: 'YouTube', url }); // YouTube: tidak punya tangga resolusi palsu (#qXXXp), kualitas diatur YouTube sendiri
-        const n = resNum(s.res) || urlRes(url);
+        const n = resNum(s.res);
         real.push({ res: n ? n + 'p' : String(s.res || 'Auto'), url });
     });
     const asc = (a, b) => srcRank(a) - srcRank(b);
@@ -7297,6 +6954,10 @@ function jqFolder(u) {
 // kategori otomatis: field kategori di JSON > petunjuk di link (folder film/anime) > jumlah episode
 function jqCategory(g, series) {
     const hint = String(g.hint || '').toLowerCase();
+    const xs = hint + ' ' + g.urls.map(u => { try { return decodeURIComponent(new URL(u).pathname); } catch (e) { return u; } }).join(' ').toLowerCase();
+    if (/drakor|kdrama|korean[-\s]?drama|drama[-\s]?korea/.test(xs)) return 'drakor';
+    if (/kartun|cartoon/.test(xs)) return 'kartun';
+    if (/dokumenter|documentary/.test(xs)) return 'dokumenter';
     if (/anime|donghua|aniplay/.test(hint)) return 'anime';
     if (/film|movie|bioskop/.test(hint)) return 'film';
     const path = g.urls.map(u => { try { return decodeURIComponent(new URL(u).pathname); } catch (e) { return u; } }).join(' ').toLowerCase();
@@ -7385,14 +7046,6 @@ async function jqProcess(items, o, bad = [], warns = [], infos = []) {
         if (warns.length) impPre += `Peringatan M4S: ${jqNames(warns)}\n`;
         if (empty.length) impPre += `${empty.length} file tidak berisi data film (tidak ada source_quality): ${jqNames(empty)}\n`;
 
-        if (records.length) {
-            try {
-                prog(.04, 'Mengecek format link (m4s / mpd)…');
-                const dt = await jqDetect(records);
-                if (dt.infos.length) impPre += `Deteksi m4s/mpd:\n${jqNames(dt.infos)}\n`;
-                if (dt.warns.length) impPre += `Peringatan M4S: ${jqNames(dt.warns)}\n`;
-            } catch (e) { impPre += 'Deteksi m4s dilewati: ' + (e.message || e) + '\n'; }
-        }
         const rows = jqBuild(records, o);
         await Promise.all(rows.filter(r => r._ytGuess).map(async r => { // judul asli video YouTube (oEmbed) menggantikan "YouTube <id>"
             const tt = await ytTitle(r._ytGuess);
@@ -7665,14 +7318,7 @@ async function addEp() {
         }
         if (!v || !$('#e_t').value)
             return toast('Pilih series & isi video');
-        let esrc = null;
-        if (v && (isM4s(v) || isMpd(v))) { // deteksi otomatis m4s / mpd
-            toast('Mendeteksi format video…');
-            const a = await autoSources('Episode', [{ res: 'Auto', url: v.trim() }]);
-            if (a.sources.length) { esrc = a.sources; v = pickSrc({ sources: a.sources }, 1080).url; }
-        }
         const { error } = await sb.from('episodes').insert({
-            ...(esrc ? { sources: esrc } : {}),
             title_id: +$('#e_t').value,
             season: +$('#e_s').value || 1,
             number: +$('#e_n').value || 1,
@@ -8052,10 +7698,11 @@ async function ntGet() {
     }
 }
 
-function ntClose() {
-    const n = document.getElementById('nt');
+function ntClose(el) {
+    const n = (el && el.nodeType === 1) ? el : document.getElementById('nt');
     if (!n || n.classList.contains('out')) return;
     n.classList.add('out');
+    n._closedAt = Date.now();
     setTimeout(() => n.remove(), 300);
 }
 addEventListener('keydown', e => { if (e.key === 'Escape') ntClose(); });
@@ -8076,9 +7723,9 @@ function ntShow(n) {
     const ok = d.querySelector('.nok');
     if (ok) ok.focus({ preventScroll: true });
     if (secs) {
-        const bar = d.querySelector('.nbar');
-        if (matchMedia('(prefers-reduced-motion: reduce)').matches) setTimeout(ntClose, secs * 1000);
-        else bar.addEventListener('animationend', ntClose);
+        // timer murni (tidak bergantung animationend / :hover yang bisa macet di mobile & mode efek rendah)
+        d._exp = Date.now() + secs * 1000;
+        setTimeout(() => ntClose(d), secs * 1000);
     }
 }
 
@@ -8764,7 +8411,7 @@ function dtRender(c) {
 <div class="dt-acts"><span class="acts" data-acts></span></div></section>
 <section class="dt-card"><b class="dt-h">Progress Menonton</b><div class="dt-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><i style="width:${pct}%"></i></div><div class="dt-ps"><b>${pct}%</b> Selesai${eps.length ? ` · ${doneN} dari ${eps.length} episode` : ''}</div></section>
 <section class="dt-card"><button class="dt-fold" id="dtFold" aria-expanded="${DTS.open}"><b class="dt-h">Detail lainnya</b>${ic('chev')}</button>
-<dl class="dt-rows" id="dtRows" ${DTS.open ? '' : 'hidden'}>${row('Studio', t.studio)}${row('Label', t.label || (t.type === 'series' ? 'TV' : 'Movie'))}${row('Tags', t.tags || t.category)}${row('Rilis', rel)}${row('Status', stTxt)}${row('Rating', ratingTxt)}${row('Genre', t.genre)}</dl>
+<dl class="dt-rows" id="dtRows" ${DTS.open ? '' : 'hidden'}>${row('Studio', t.studio)}${row('Label', t.label || (t.type === 'series' ? 'TV' : 'Movie'))}${row('Tags', window.NMTax ? NMTax.tagsOf(t).filter(x => x.kind !== 'pick').map(x => x.name).join(', ') : (t.tags || t.category))}${row('Rilis', rel)}${row('Status', stTxt)}${row('Rating', ratingTxt)}${row('Genre', t.genre)}</dl>
 ${me.role === 'admin' ? '<button class="plink dt-edit" id="dtEdit">Edit info judul</button>' : ''}</section>
 ${isS ? `<div class="dt-eh"><h2>Episode (${eps.length})</h2><button class="dt-sq" id="dtView" aria-label="Ganti tampilan"></button><button class="dt-pillb" id="dtSort"></button></div>
 <label class="dt-search"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="${P.search}"/></svg><input id="dtQ" type="search" inputmode="search" placeholder="Cari episode… (mis. 15)" autocomplete="off" value="${esc(DTS.q)}" aria-label="Cari episode"></label>
@@ -9161,8 +8808,8 @@ html[data-fx=high] .poster.frm:not(.vis) .frmi::before,html[data-fx=high] .poste
 .fminib button{width:30px;height:30px;border-radius:50%;border:0;background:#000a;color:#fff;font-size:15px;cursor:pointer}
 .av{--h:200;background:linear-gradient(135deg,hsla(var(--h),95%,72%,.6),hsla(calc(var(--h) + 50),90%,62%,.35));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,.55);box-shadow:0 4px 14px hsla(var(--h),80%,50%,.25),inset 0 1px 0 rgba(255,255,255,.6);position:relative;overflow:hidden;border-radius:50%}
 .av::after{content:"";position:absolute;left:14%;right:14%;bottom:20%;height:14%;background:radial-gradient(circle at 12% 50%,#ff8fb1aa 0 38%,#0000 40%),radial-gradient(circle at 88% 50%,#ff8fb1aa 0 38%,#0000 40%);pointer-events:none}
-.reco{margin:0 0 18px}.reco h2{margin:6px 0 10px}.reco .row{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}
-.rcard{flex:0 0 clamp(110px,18vw,170px);scroll-snap-align:start;cursor:pointer}.rcard .poster{width:100%;aspect-ratio:2/3}.rcard b{display:block;font-size:.85rem;margin-top:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.rcard small{opacity:.7}
+.reco{margin:0 0 6px}.reco h2{margin:6px 0 10px}.reco .row{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;scroll-snap-type:x proximity}
+.rcard{flex:0 0 clamp(110px,18vw,170px);width:clamp(110px,18vw,170px);min-width:0;max-width:170px;box-sizing:border-box;overflow:hidden;scroll-snap-align:start;cursor:pointer}.rcard .poster{width:100%;aspect-ratio:2/3}.rcard b{display:block;font-size:.85rem;margin-top:6px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.rcard small{opacity:.7}
 .seg.adm{display:flex;flex-wrap:wrap;gap:6px;position:sticky;top:0;z-index:5;padding:6px}.seg.adm button{flex:1 1 auto}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
 #v>.glass.pad{margin-bottom:14px}
@@ -9178,7 +8825,7 @@ html[data-fx=high] .poster.frm:not(.vis) .frmi::before,html[data-fx=high] .poste
 .nsm .ic{display:flex;gap:8px;align-items:center;padding:8px;border-radius:12px;background:#8882}
 @media(min-width:1400px){main#v{max-width:1560px;margin-inline:auto}}
 @media(max-width:600px){.fgrid{grid-template-columns:1fr}.film.mini{width:60vw}}
-@media(min-width:601px) and (max-width:1024px){.rcard{flex-basis:clamp(120px,22vw,170px)}}
+@media(min-width:601px) and (max-width:1024px){.rcard{flex-basis:clamp(120px,22vw,170px);width:clamp(120px,22vw,170px)}}
 /* ===== floating pill + running text sinkron, estetika ===== */
 #fpill{position:fixed;left:50%;top:calc(var(--hh,64px) + 10px);transform:translate(-50%,-8px);z-index:40;display:flex;align-items:center;gap:8px;max-width:min(560px,calc(100vw - 24px));padding:6px 8px 6px 12px;border-radius:var(--pill,999px);border:1px solid var(--bd,rgba(255,255,255,.18));background:rgba(var(--glow,255,255,255),.1);backdrop-filter:blur(16px) saturate(1.3);-webkit-backdrop-filter:blur(16px) saturate(1.3);box-shadow:0 8px 28px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.25);color:var(--ac2);font:700 .85rem/1 var(--font);opacity:0;pointer-events:none;transition:opacity .35s,transform .35s cubic-bezier(.3,1.4,.4,1)}
 #fpill.on{opacity:1;transform:translate(-50%,0);pointer-events:auto}
@@ -9262,7 +8909,7 @@ input,textarea,select{border-radius:var(--rs,12px);transition:border-color .2s,b
 // ===== update masif: minimize player, rekomendasi, admin pengguna, ID 5 digit, profil publik, follow, pesan, undangan nobar =====
 (function () {
     const H = document.documentElement, rpc = (n, a) => sb.rpc(n, a || {});
-    const need = e => { if (e && /function|schema cache|does not exist|column/i.test(e.message || '')) toast('Jalankan migrasi_sosial.sql di Supabase SQL Editor dulu'); else if (e) toast(e.message); return !!e; };
+    const need = e => { if (e) { const missing = ['PGRST202', 'PGRST204', 'PGRST205', '42883', '42P01', '42703'].includes(e.code) || /could not find the (function|table)|schema cache/i.test(e.message || ''); toast(missing ? 'Fitur sosial belum terpasang di database (migrasi SQL belum dijalankan)' : (e.message || 'Terjadi kesalahan')); } return !!e; };
     // --- 1. mini player ---
     window.filmMini = on => {
         const f = $('#film'); if (!f) return;
@@ -9291,7 +8938,7 @@ input,textarea,select{border-radius:var(--rs,12px);transition:border-color .2s,b
         const by = {}; titles.forEach(t => (by[(t.category || 'film')] = by[t.category || 'film'] || []).push(t));
         const pick = []; const pools = Object.values(by).map(a => [...a].sort(() => Math.random() - .5));
         for (let i = 0; pick.length < 12 && pools.some(p => p[i]); i++) pools.forEach(p => p[i] && pick.length < 12 && pick.push(p[i]));
-        $('#v').insertAdjacentHTML('afterbegin', `<section class="reco"><h2>${ic('sparkle')} Rekomendasi</h2><div class="row">${pick.map(t => `<div class="rcard" onclick="openTitle('${t.id}')">${poster(t)}<b>${esc(t.title)}</b><small>${esc(catLabel(t) || (t.type === 'series' ? 'Series' : 'Film'))}</small></div>`).join('')}</div></section>`);
+        { const at = $('#nfrows'); if (at) at.insertAdjacentHTML('beforebegin', `<section class="reco nfr"><h2>${ic('sparkle')} Rekomendasi</h2><div class="row">${pick.map(t => `<div class="rcard" onclick="openTitle('${t.id}')">${poster(t)}<b>${esc(t.title)}</b><small>${esc(catLabel(t) || (t.type === 'series' ? 'Series' : 'Film'))}</small></div>`).join('')}</div></section>`); }
     };
     // --- 3. admin: ubah nama & password user ---
     window.admUsr = () => { setTimeout(admUsrLoad, 0); return '<div class="glass pad" id="usr_box"><p class="hint">Memuat pengguna…</p></div>'; };
@@ -9580,7 +9227,8 @@ function annShow(a) {
     el.style.setProperty('--ad', dur + 's');
     const tm = new Date(a.created_at || Date.now()).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     el.innerHTML = `<div class="ai">📢</div><div style="min-width:0"><b class="at">${esc(a.title || 'Pengumuman')}</b><p class="am">${esc(a.message || '')}</p><small class="aw">Pengumuman · ${esc(tm)}</small></div><button class="ax" aria-label="Tutup">✕</button><i class="ab"></i>`;
-    const close = () => { if (el._c) return; el._c = 1; el.classList.add('out'); setTimeout(() => el.remove(), 340); };
+    const close = () => { if (el._c) return; el._c = Date.now(); el.classList.add('out'); setTimeout(() => el.remove(), 340); };
+    el._exp = Date.now() + dur * 1000; el._close = close;
     el.querySelector('.ax').onclick = close;
     w.prepend(el);
     while (w.children.length > 3) w.lastElementChild.remove();
@@ -9666,6 +9314,201 @@ async function annSend() {
     new MutationObserver(sync).observe(root, { attributes: true, attributeFilter: ['data-fx', 'data-ultra'] });
     if (document.body) sync(); else addEventListener('DOMContentLoaded', sync);
 })();
+</script>
+<script>
+/* ===== Notification watchdog: pastikan semua notif (toast, pengumuman, popup update) pasti hilang di mobile ===== */
+(function () {
+    const sweep = () => {
+        const now = Date.now();
+        try {
+            const t = document.getElementById('toast');
+            if (t && t.classList.contains('on') && typeof toastExp !== 'undefined' && toastExp && now > toastExp + 150) t.classList.remove('on');
+        } catch (e) { }
+        document.querySelectorAll('.ann').forEach(el => {
+            if (el._c) { if (now - el._c > 600) el.remove(); }
+            else if (el._exp && now > el._exp && el._close) el._close();
+        });
+        const nt = document.getElementById('nt');
+        if (nt) {
+            if (nt.classList.contains('out')) { if (nt._closedAt && now - nt._closedAt > 600) nt.remove(); }
+            else if (nt._exp && now > nt._exp) ntClose(nt);
+        }
+        const w = document.getElementById('annw');
+        if (w && !w.children.length) w.remove();
+    };
+    setInterval(sweep, 1000);
+    ['visibilitychange', 'pageshow', 'focus', 'resume'].forEach(ev => addEventListener(ev, sweep));
+    document.addEventListener('visibilitychange', sweep);
+})();
+</script>
+<style id="nm-nwb-small">
+/* label BARU diperkecil (override agar konsisten di semua baris, termasuk Rekomendasi) */
+.poster .nwb,.rcard .poster .nwb{font-size:.54rem!important;font-weight:800!important;line-height:1.2!important;letter-spacing:.03em!important;padding:2px 7px!important;top:7px!important;left:7px!important;border-radius:99px!important}
+.poster .tag + .nwb{top:25px!important}
+.poster .tag{font-size:.54rem!important;padding:2px 7px!important}
+</style>
+<style id="nm-tax">
+.chip small{opacity:.6;margin-left:6px;font-size:.72em;font-weight:700}
+.cgl{flex:none;align-self:center;font:800 .6rem var(--font);text-transform:uppercase;letter-spacing:.09em;color:var(--mut);padding:0 2px 0 10px;white-space:nowrap}
+.chips.dcw{display:flex;flex-wrap:wrap;gap:8px;max-height:92px;overflow:hidden;margin:10px 0 0;padding:0;transition:max-height .35s ease}
+.chips.dcw.open{max-height:1400px}
+.dcbar{display:flex;align-items:center;gap:10px;margin:10px 2px 8px;flex-wrap:wrap}
+.dcbar small{color:var(--mut);margin-right:auto}
+.dcbar select{width:auto;margin:0;padding:8px 12px;font-size:.85rem}
+.pchips span.ptg{cursor:pointer}
+</style>
+<script>
+/* ===== NMTax: tag & kategori otomatis dari database (gaya Netflix) ===== */
+window.NMTax = (function () {
+    const GEN = {
+        'action': 'Aksi', 'adventure': 'Petualangan', 'animation': 'Animasi', 'comedy': 'Komedi', 'crime': 'Kriminal',
+        'documentary': 'Dokumenter', 'family': 'Keluarga', 'fantasy': 'Fantasi', 'history': 'Sejarah', 'horror': 'Horor',
+        'music': 'Musik', 'musical': 'Musik', 'mystery': 'Misteri', 'romance': 'Romantis', 'romantic': 'Romantis',
+        'science fiction': 'Fiksi Ilmiah', 'sci-fi': 'Fiksi Ilmiah', 'scifi': 'Fiksi Ilmiah', 'sci fi': 'Fiksi Ilmiah',
+        'tv movie': 'Film TV', 'war': 'Perang', 'kids': 'Anak', 'children': 'Anak', 'anak-anak': 'Anak',
+        'reality': 'Reality', 'talk': 'Talk Show', 'news': 'Berita', 'soap': 'Sinetron', 'sports': 'Olahraga', 'sport': 'Olahraga',
+        'biography': 'Biografi', 'martial arts': 'Bela Diri', 'supernatural': 'Supernatural', 'superhero': 'Superhero',
+        'action & adventure': ['Aksi', 'Petualangan'], 'sci-fi & fantasy': ['Fiksi Ilmiah', 'Fantasi'], 'war & politics': ['Perang', 'Politik']
+    };
+    const INFER = [
+        [/horor|horror|hantu|ghost|setan|kuntilanak|zombie|demon/, 'Horor'], [/komedi|comedy|kocak|lucu/, 'Komedi'],
+        [/\baksi\b|action|pertarungan|agen rahasia|\bspy\b/, 'Aksi'], [/romans|cinta|jatuh cinta|love story/, 'Romantis'],
+        [/fiksi ilmiah|sci-fi|alien|luar angkasa|robot|masa depan/, 'Fiksi Ilmiah'], [/fantasi|fantasy|sihir|penyihir|wizard|naga|dragon/, 'Fantasi'],
+        [/kriminal|crime|detektif|detective|pembunuh|murder|polisi/, 'Kriminal'], [/misteri|mystery/, 'Misteri'],
+        [/petualangan|adventure/, 'Petualangan'], [/animasi|animation|kartun|cartoon/, 'Animasi'],
+        [/perang|\bwar\b|tentara/, 'Perang'], [/keluarga|family/, 'Keluarga'], [/thriller|menegangkan/, 'Thriller'], [/\bdrama\b/, 'Drama']
+    ];
+    const STATUS = { ongoing: 'Sedang Tayang', completed: 'Tamat', upcoming: 'Segera Tayang' };
+    const cap = x => String(x).trim().replace(/\S+/g, w => /^[A-Z0-9&]{2,4}$/.test(w) ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+    const arr = v => [].concat(v);
+    const normGenre = (raw, re) => {
+        const out = [];
+        String(raw || '').split(re || /[,;|\/]+/).forEach(p => {
+            p = p.trim(); if (!p) return;
+            const k = p.toLowerCase();
+            if (GEN[k]) { out.push(...arr(GEN[k])); return; }
+            if (/\s&\s/.test(p)) { p.split(/\s&\s/).forEach(x => { x = x.trim(); if (x) out.push(...arr(GEN[x.toLowerCase()] || cap(x))); }); return; }
+            out.push(cap(p));
+        });
+        return out;
+    };
+    const L0 = () => (typeof titles !== 'undefined' ? titles : []);
+    let popAt = 0, popN = -1, popSet = new Set();
+    const ensure = () => {
+        const L = L0(), now = Date.now();
+        if (popN === L.length && now - popAt < 30000) return;
+        popN = L.length; popAt = now;
+        const vc = typeof vcount !== 'undefined' ? vcount : {};
+        const top = L.filter(t => (vc[t.id] || 0) > 0).sort((a, b) => (vc[b.id] || 0) - (vc[a.id] || 0));
+        popSet = new Set(top.slice(0, Math.max(3, Math.ceil(L.length * .15))).map(t => t.id));
+    };
+    const tagsOf = t => {
+        ensure();
+        const out = [], seen = new Set();
+        const add = (name, kind) => { if (!name) return; const key = String(name).toLowerCase(); if (seen.has(key)) return; seen.add(key); out.push({ name, kind, key }); };
+        if (typeof isNewTitle === 'function' && isNewTitle(t)) add('Baru', 'pick');
+        if (popSet.has(t.id)) add('Populer', 'pick');
+        const r = typeof ratings !== 'undefined' ? ratings[t.id] : null;
+        if (r && r.avg >= 4) add('Rating Tinggi', 'pick');
+        add(t.type === 'series' ? 'Series' : 'Film', 'type');
+        const cat = String(t.category || '').trim();
+        if (cat && cat.toLowerCase() !== 'film') add(cap(cat), 'cat');
+        if (STATUS[t.status]) add(STATUS[t.status], 'status');
+        const gs = normGenre(t.genre);
+        gs.forEach(g => add(g, 'genre'));
+        if (!gs.length) {
+            const txt = ((t.title || '') + ' ' + (t.description || '')).toLowerCase(), inf = [];
+            INFER.forEach(([re, g]) => { if (re.test(txt) && inf.length < 3) inf.push(g); });
+            inf.forEach(g => add(g, 'genre'));
+        }
+        normGenre(t.tags, /[,;|#]+/).forEach(g => add(g, 'tag'));
+        if (t.label && !/^(tv|movie|film)$/i.test(String(t.label).trim())) add(cap(t.label), 'tag');
+        if (t.studio) add(String(t.studio).trim(), 'studio');
+        const y = +t.year; if (y >= 1950) add(Math.floor(y / 10) * 10 + '-an', 'decade');
+        return out;
+    };
+    const index = L => {
+        const m = new Map();
+        L.forEach(t => tagsOf(t).forEach(x => { let e = m.get(x.key); if (!e) m.set(x.key, e = { ...x, items: [] }); e.items.push(t); }));
+        const by = k => [...m.values()].filter(e => e.kind === k);
+        const cnt = (a, b) => b.items.length - a.items.length || a.name.localeCompare(b.name);
+        const groups = [
+            ['Pilihan', by('pick')], ['Jenis', by('type').sort(cnt)], ['Kategori', by('cat').sort(cnt)], ['Status', by('status').sort(cnt)],
+            ['Genre', by('genre').sort(cnt)], ['Tahun', by('decade').sort((a, b) => b.name.localeCompare(a.name))],
+            ['Tag', by('tag').sort(cnt).slice(0, 20)], ['Studio', by('studio').filter(e => e.items.length >= 2).sort(cnt).slice(0, 12)]
+        ].filter(g => g[1].length);
+        return { map: m, groups };
+    };
+    const grp = (ix, n) => (ix.groups.find(g => g[0] === n) || [0, []])[1];
+    const btn = e => `<button class="chip" data-n="${esc(e.name)}" onclick="nfGo(this.dataset.n)">${esc(e.name)}</button>`;
+    const api = {
+        tagsOf, index, normGenre,
+        genreMap(L, out) { L.forEach(t => tagsOf(t).forEach(x => { if (x.kind === 'genre') (out[x.name] = out[x.name] || []).push(t); })); return out; },
+        pillsHtml(L) {
+            const ix = index(L);
+            const list = [...grp(ix, 'Pilihan').filter(e => e.name !== 'Rating Tinggi'), ...grp(ix, 'Jenis'), ...grp(ix, 'Kategori'), ...grp(ix, 'Status'), ...grp(ix, 'Genre').slice(0, 12), ...grp(ix, 'Tahun').slice(0, 3)];
+            return `<nav class="nfpills row" aria-label="Kategori"><button class="chip" onclick="nfGo('')">Semua</button>${list.map(btn).join('')}</nav>`;
+        },
+        extraRows(L) {
+            const ix = index(L), rows = [];
+            grp(ix, 'Status').forEach(e => e.items.length >= 2 && rows.push({ ico: 'clock', name: e.name, l: e.items, g: e.name }));
+            grp(ix, 'Tag').forEach(e => e.items.length >= 3 && rows.push({ ico: 'film', name: e.name, l: e.items, g: e.name }));
+            grp(ix, 'Studio').forEach(e => e.items.length >= 3 && rows.push({ ico: 'film', name: 'Studio ' + e.name, l: e.items, g: e.name }));
+            grp(ix, 'Tahun').slice(0, 2).forEach(e => e.items.length >= 4 && rows.push({ ico: 'clock', name: 'Rilis ' + e.name, l: e.items, g: e.name }));
+            return rows;
+        },
+        badge(t) {
+            const c = String(t.category || '').trim(), s = t.type === 'series';
+            const txt = c && c.toLowerCase() !== 'film' ? cap(c) + (s ? ' · Series' : '') : (s ? 'Series' : '');
+            return txt ? `<em class="tag">${esc(txt)}</em>` : '';
+        },
+        chipsHtml(t) {
+            return tagsOf(t).filter(x => ['cat', 'genre', 'decade', 'status', 'tag'].includes(x.kind)).slice(0, 7)
+                .map(x => `<span class="ptg" data-n="${esc(x.name)}" onclick="nfGo(this.dataset.n)">${esc(x.name)}</span>`).join('');
+        },
+        catOptions() {
+            const set = new Set(['film', 'anime', 'drama', 'drakor', 'kartun', 'dokumenter']);
+            L0().forEach(t => t.category && set.add(String(t.category).toLowerCase().trim()));
+            return [...set].map(c => `<option value="${esc(c)}"></option>`).join('');
+        }
+    };
+    return api;
+})();
+
+window.nfGo = function (g) { Promise.resolve(go('discover')).then(() => views.discover('', g || 'Semua')); };
+
+views.discover = function (q = '', g = 'Semua') {
+    const L = L0d(), ix = NMTax.index(L);
+    const sel = new Set(g && g !== 'Semua' ? [String(g).toLowerCase()] : []);
+    let sort = 'new', qq = String(q || '').toLowerCase();
+    const tk = new Map(L.map(t => [t.id, NMTax.tagsOf(t)]));
+    const rt = t => (typeof ratings !== 'undefined' && ratings[t.id]) ? ratings[t.id].avg : 0;
+    const vw = t => (typeof vcount !== 'undefined' && vcount[t.id]) || 0;
+    const SORT = {
+        new: (a, b) => (Date.parse(b.created_at) || 0) - (Date.parse(a.created_at) || 0), pop: (a, b) => vw(b) - vw(a),
+        rate: (a, b) => rt(b) - rt(a), year: (a, b) => (+b.year || 0) - (+a.year || 0), az: (a, b) => a.title.localeCompare(b.title)
+    };
+    const chips = () => `<button class="chip ${sel.size ? '' : 'on'}" data-k="">Semua</button>` + ix.groups.map(([gn, a]) => `<span class="cgl">${gn}</span>` + a.map(e => `<button class="chip ${sel.has(e.key) ? 'on' : ''}" data-k="${esc(e.key)}">${esc(e.name)}<small>${e.items.length}</small></button>`).join('')).join('');
+    const filt = () => L.filter(t => {
+        const tg = tk.get(t.id);
+        if ([...sel].some(k => !tg.some(x => x.key === k))) return false;
+        return !qq || ((t.title || '') + ' ' + tg.map(x => x.name).join(' ')).toLowerCase().includes(qq);
+    }).sort(SORT[sort]);
+    $('#v').innerHTML = `<div class="sbox">${ic('search')}<input id="q" placeholder="Cari judul, genre, kategori..." value="${esc(q)}" autocomplete="off"></div><div class="chips dcw" id="dc">${chips()}</div><div class="dcbar"><small id="dcn"></small><button class="btn sm ghost" id="dcm">Semua filter ▾</button><select id="dsort" aria-label="Urutkan"><option value="new">Terbaru</option><option value="pop">Terpopuler</option><option value="rate">Rating tertinggi</option><option value="year">Tahun rilis</option><option value="az">A–Z</option></select></div><div class="grid" id="gr"></div>`;
+    const paint = () => { const r = filt(); $('#gr').innerHTML = r.map(poster).join('') || empty('Ga ketemu'); $('#dcn').textContent = r.length + ' judul'; };
+    $('#q').oninput = e => { qq = e.target.value.toLowerCase(); paint(); };
+    $('#dsort').onchange = e => { sort = e.target.value; paint(); };
+    $('#dcm').onclick = function () { const o = $('#dc').classList.toggle('open'); this.textContent = o ? 'Ringkas ▴' : 'Semua filter ▾'; };
+    $('#dc').onclick = e => {
+        const b = e.target.closest('.chip'); if (!b) return;
+        const k = b.dataset.k;
+        if (!k) sel.clear(); else if (sel.has(k)) sel.delete(k); else sel.add(k);
+        $('#dc').querySelectorAll('.chip').forEach(c => c.classList.toggle('on', c.dataset.k ? sel.has(c.dataset.k) : !sel.size));
+        paint();
+    };
+    paint();
+};
+function L0d() { return typeof titles !== 'undefined' ? titles : []; }
 </script>
 </body>
 </html>
